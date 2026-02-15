@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { Language } from '../types';
 import { translations } from '../utils/translations';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 type LanguageContextType = {
   language: Language;
@@ -11,14 +12,15 @@ type LanguageContextType = {
 
 const LanguageContext = React.createContext<LanguageContextType | undefined>(undefined);
 
-// FIX: Use PropsWithChildren to correctly type the component with children, resolving a TypeScript error in App.tsx.
 export const LanguageProvider = ({ children }: React.PropsWithChildren) => {
-  const [language, setLanguage] = React.useState<Language>(Language.EN);
+  // Use local storage to persist language preference
+  const [language, setLanguage] = useLocalStorage<Language>('language', Language.EN);
 
   const t = (key: keyof typeof translations.en): string => {
-    const langKey = language as keyof typeof translations;
+    // Ensure we have a valid language key, fallback to EN if not found
+    const langKey = (Object.values(Language).includes(language) ? language : Language.EN) as keyof typeof translations;
     const translationSet = translations[langKey] || translations[Language.EN];
-    return translationSet[key] || translations[Language.EN][key];
+    return translationSet[key] || translations[Language.EN][key] || key;
   };
 
   return (
