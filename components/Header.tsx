@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import * as React from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -11,8 +11,8 @@ const Header: React.FC = () => {
     const { t } = useLanguage();
     const { user, isAuthenticated, signOut, isAdmin } = useAuth();
     const navigate = useNavigate();
-    const [dropdownOpen, setDropdownOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
+    const [dropdownOpen, setDropdownOpen] = React.useState(false);
+    const dropdownRef = React.useRef<HTMLDivElement>(null);
 
     const handleSignOut = () => {
         signOut();
@@ -20,7 +20,7 @@ const Header: React.FC = () => {
         navigate('/');
     };
     
-    useEffect(() => {
+    React.useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setDropdownOpen(false);

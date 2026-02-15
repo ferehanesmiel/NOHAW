@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, PropsWithChildren } from 'react';
+
+import * as React from 'react';
 import { Language } from '../types';
 import { translations } from '../utils/translations';
 
@@ -8,14 +9,16 @@ type LanguageContextType = {
   t: (key: keyof typeof translations.en) => string;
 };
 
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+const LanguageContext = React.createContext<LanguageContextType | undefined>(undefined);
 
 // FIX: Use PropsWithChildren to correctly type the component with children, resolving a TypeScript error in App.tsx.
-export const LanguageProvider = ({ children }: PropsWithChildren) => {
-  const [language, setLanguage] = useState<Language>(Language.EN);
+export const LanguageProvider = ({ children }: React.PropsWithChildren) => {
+  const [language, setLanguage] = React.useState<Language>(Language.EN);
 
   const t = (key: keyof typeof translations.en): string => {
-    return translations[language][key] || translations[Language.EN][key];
+    const langKey = language as keyof typeof translations;
+    const translationSet = translations[langKey] || translations[Language.EN];
+    return translationSet[key] || translations[Language.EN][key];
   };
 
   return (
@@ -26,7 +29,7 @@ export const LanguageProvider = ({ children }: PropsWithChildren) => {
 };
 
 export const useLanguage = (): LanguageContextType => {
-  const context = useContext(LanguageContext);
+  const context = React.useContext(LanguageContext);
   if (!context) {
     throw new Error('useLanguage must be used within a LanguageProvider');
   }

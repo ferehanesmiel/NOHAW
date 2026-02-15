@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import * as React from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Language } from '../types';
 import { GlobeIcon, ChevronDownIcon } from './icons';
@@ -13,7 +13,7 @@ const languages = [
 
 const LanguageSwitcher: React.FC = () => {
   const { language, setLanguage } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = React.useState(false);
 
   const selectedLanguage = languages.find(l => l.code === language);
 

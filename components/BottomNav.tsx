@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import * as React from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { HomeIcon, CoursesIcon, ProfileIcon, MoreIcon } from './icons';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -8,7 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 const BottomNav: React.FC = () => {
     const { t } = useLanguage();
     const { isAuthenticated } = useAuth();
-    const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+    const [moreMenuOpen, setMoreMenuOpen] = React.useState(false);
     
     const navLinkClass = ({ isActive }: { isActive: boolean }) =>
         `flex flex-col items-center justify-center w-full pt-2 pb-1 text-xs ${isActive ? 'text-emerald-500' : 'text-slate-500'}`;

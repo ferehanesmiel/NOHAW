@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import * as React from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Course } from '../types';
 
@@ -11,7 +11,7 @@ interface PaymentModalProps {
 
 const PaymentModal: React.FC<PaymentModalProps> = ({ course, onClose, onPaymentSuccess }) => {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'international' | 'local'>('international');
+  const [activeTab, setActiveTab] = React.useState<'international' | 'local'>('international');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

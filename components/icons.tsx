@@ -1,5 +1,5 @@
 
-import React from 'react';
+import * as React from 'react';
 
 export const LogoIcon = () => (
     <div className="flex items-center space-x-2">

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import * as React from 'react';
 import { useDropzone } from 'react-dropzone';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -14,27 +14,27 @@ const ProfilePage: React.FC = () => {
     const { t } = useLanguage();
     
     // User details state
-    const [username, setUsername] = useState(user?.username || '');
-    const [email, setEmail] = useState(user?.email || '');
-    const [bio, setBio] = useState(user?.bio || '');
-    const [profilePicture, setProfilePicture] = useState<string | null>(user?.profilePictureUrl || null);
-    const [detailsSuccessMessage, setDetailsSuccessMessage] = useState('');
+    const [username, setUsername] = React.useState(user?.username || '');
+    const [email, setEmail] = React.useState(user?.email || '');
+    const [bio, setBio] = React.useState(user?.bio || '');
+    const [profilePicture, setProfilePicture] = React.useState<string | null>(user?.profilePictureUrl || null);
+    const [detailsSuccessMessage, setDetailsSuccessMessage] = React.useState('');
 
     // Password change state
-    const [currentPassword, setCurrentPassword] = useState('');
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmNewPassword, setConfirmNewPassword] = useState('');
-    const [passwordMessage, setPasswordMessage] = useState('');
-    const [isPasswordError, setIsPasswordError] = useState(false);
+    const [currentPassword, setCurrentPassword] = React.useState('');
+    const [newPassword, setNewPassword] = React.useState('');
+    const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
+    const [passwordMessage, setPasswordMessage] = React.useState('');
+    const [isPasswordError, setIsPasswordError] = React.useState(false);
     
     // Testimonial State
     const [testimonials, setTestimonials] = useLocalStorage<Testimonial[]>('testimonials', []);
-    const [myQuote, setMyQuote] = useState('');
-    const [myRole, setMyRole] = useState('');
-    const [existingTestimonialId, setExistingTestimonialId] = useState<string | null>(null);
-    const [testimonialMessage, setTestimonialMessage] = useState('');
+    const [myQuote, setMyQuote] = React.useState('');
+    const [myRole, setMyRole] = React.useState('');
+    const [existingTestimonialId, setExistingTestimonialId] = React.useState<string | null>(null);
+    const [testimonialMessage, setTestimonialMessage] = React.useState('');
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (user) {
             setUsername(user.username || '');
             setEmail(user.email || '');
@@ -50,7 +50,7 @@ const ProfilePage: React.FC = () => {
         }
     }, [user, testimonials]);
     
-    const onDrop = useCallback((acceptedFiles: File[]) => {
+    const onDrop = React.useCallback((acceptedFiles: File[]) => {
         const file = acceptedFiles[0];
         const reader = new FileReader();
         reader.onload = (event) => {

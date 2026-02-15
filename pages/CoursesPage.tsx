@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -17,8 +17,8 @@ const CoursesPage: React.FC = () => {
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
 
-    const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
-    const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+    const [isPaymentModalOpen, setPaymentModalOpen] = React.useState(false);
+    const [selectedCourse, setSelectedCourse] = React.useState<Course | null>(null);
 
     const handleEnrollClick = (course: Course) => {
         if (!isAuthenticated) {

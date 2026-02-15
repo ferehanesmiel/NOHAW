@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext, PropsWithChildren } from 'react';
+import * as React from 'react';
 import { User, UserRole } from '../types';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
@@ -17,12 +17,12 @@ type AuthContextType = {
   changePassword: (currentPassword: string, newPassword: string) => boolean;
 };
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
 const ADMIN_EMAIL = 'esmielferehan@gmail.com';
 const ADMIN_PASS = 'esmielferehan@123';
 
-export const AuthProvider = ({ children }: PropsWithChildren) => {
+export const AuthProvider = ({ children }: React.PropsWithChildren) => {
   const [user, setUser] = useLocalStorage<User | null>('user', null);
   const [users, setUsers] = useLocalStorage<User[]>('users_db', [
     { id: '1', email: ADMIN_EMAIL, password: ADMIN_PASS, username: 'Admin User', role: UserRole.ADMIN, bio: '', profilePictureUrl: '' }
@@ -113,7 +113,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 };
 
 export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
+  const context = React.useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }

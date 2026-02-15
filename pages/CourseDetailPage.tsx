@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
+
+import * as React from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -10,11 +11,11 @@ const CourseDetailPage: React.FC = () => {
     const { courseId } = useParams<{ courseId: string }>();
     const { courses, enrollments, progress, updateProgress } = useCourse();
     
-    const [course, setCourse] = useState<Course | undefined>(undefined);
-    const [isLoading, setIsLoading] = useState(true);
-    const contentRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+    const [course, setCourse] = React.useState<Course | undefined>(undefined);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const contentRefs = React.useRef<{ [key: string]: HTMLDivElement | null }>({});
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (courseId) {
             const foundCourse = courses.find(c => c.id === courseId);
             setCourse(foundCourse);

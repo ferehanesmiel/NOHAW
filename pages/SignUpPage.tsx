@@ -1,20 +1,20 @@
 
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { LogoIcon, GoogleIcon } from '../components/icons';
 
 const SignUpPage: React.FC = () => {
-    const [username, setUsername] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    const [username, setUsername] = React.useState('');
+    const [email, setEmail] = React.useState('');
+    const [password, setPassword] = React.useState('');
+    const [error, setError] = React.useState('');
     const { signUp, signIn, isAuthenticated, isAdmin } = useAuth();
     const { t } = useLanguage();
     const navigate = useNavigate();
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (isAuthenticated) {
             navigate(isAdmin ? '/admin' : '/dashboard');
         }

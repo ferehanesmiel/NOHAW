@@ -1,5 +1,5 @@
 
-import React from 'react';
+import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Course } from '../types';
 import { useCourse } from '../contexts/CourseContext';
