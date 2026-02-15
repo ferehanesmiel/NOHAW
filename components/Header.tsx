@@ -45,8 +45,6 @@ const Header: React.FC = () => {
                             <nav className="hidden md:flex md:ml-10 md:space-x-8">
                                 <NavLink to="/courses" className={navLinkClass}>{t('courses')}</NavLink>
                                 <NavLink to="/dashboard" className={navLinkClass}>{t('dashboard')}</NavLink>
-                                <NavLink to="/about-us" className={navLinkClass}>{t('aboutUs')}</NavLink>
-                                <NavLink to="/support" className={navLinkClass}>{t('support')}</NavLink>
                                 {isAdmin && (
                                     <NavLink to="/admin" className={navLinkClass}>Admin</NavLink>
                                 )}
