@@ -11,6 +11,7 @@ import SignUpPage from './pages/SignUpPage';
 import ProfilePage from './pages/ProfilePage';
 import AboutUsPage from './pages/AboutUsPage';
 import SupportPage from './pages/SupportPage';
+import AIStudioPage from './pages/AIStudioPage';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { CourseProvider } from './contexts/CourseContext';
@@ -46,6 +47,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <UserDashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route 
+                  path="/ai-studio" 
+                  element={
+                    <ProtectedRoute>
+                      <AIStudioPage />
                     </ProtectedRoute>
                   }
                 />

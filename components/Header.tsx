@@ -45,6 +45,11 @@ const Header: React.FC = () => {
                             <nav className="hidden md:flex md:ml-10 md:space-x-8">
                                 <NavLink to="/courses" className={navLinkClass}>{t('courses')}</NavLink>
                                 <NavLink to="/dashboard" className={navLinkClass}>{t('dashboard')}</NavLink>
+                                <NavLink to="/ai-studio" className={navLinkClass}>
+                                    <span className="flex items-center">
+                                        AI Studio <span className="ml-1 text-[10px] bg-[--accent] text-white px-1 rounded">NEW</span>
+                                    </span>
+                                </NavLink>
                                 {isAdmin && (
                                     <NavLink to="/admin" className={navLinkClass}>Admin</NavLink>
                                 )}
@@ -73,6 +78,7 @@ const Header: React.FC = () => {
                                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-slate-200">
                                         {isAdmin && <Link to="/admin" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-[--accent] font-semibold hover:bg-slate-100">{t('adminDashboard')}</Link>}
                                         {!isAdmin && <Link to="/dashboard" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">{t('dashboard')}</Link>}
+                                        <Link to="/ai-studio" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-purple-600 hover:bg-slate-100 font-medium">AI Studio</Link>
                                         <Link to="/profile" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">{t('profile')}</Link>
                                         <button onClick={handleSignOut} className="w-full text-left block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">{t('signOut')}</button>
                                     </div>

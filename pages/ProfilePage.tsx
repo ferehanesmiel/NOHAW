@@ -5,12 +5,12 @@ import Footer from '../components/Footer';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Testimonial, UserRole } from '../types';
+import { Testimonial } from '../types';
 import { db } from '../firebase';
 import { doc, getDocs, setDoc, deleteDoc, collection } from 'firebase/firestore';
 
 const ProfilePage: React.FC = () => {
-    const { user, updateProfile, changePassword, updateUserDetails } = useAuth();
+    const { user, updateProfile, changePassword } = useAuth();
     const { t } = useLanguage();
     
     // User details state
@@ -136,20 +136,6 @@ const ProfilePage: React.FC = () => {
         setTestimonialMessage('Testimonial deleted.');
         setTimeout(() => setTestimonialMessage(''), 3000);
     }
-
-    // Developer Helper
-    const handlePromoteSelf = async () => {
-        if(user) {
-            try {
-                await updateUserDetails(user.id, { role: UserRole.ADMIN });
-                alert("Success! You are now an Admin. Refresh the page if you don't see the Admin Dashboard link.");
-                window.location.reload();
-            } catch (e) {
-                console.error(e);
-                alert("Failed to promote. Check console.");
-            }
-        }
-    }
     
     return (
         <div className="flex flex-col min-h-screen bg-slate-100">
@@ -238,20 +224,6 @@ const ProfilePage: React.FC = () => {
                             </div>
                              <div className="flex justify-end pt-2"><button type="submit" className="elegant-button">{t('changePassword')}</button></div>
                         </form>
-                    </div>
-                    
-                    {/* Developer Zone */}
-                    <div className="border-t-2 border-dashed border-slate-300 pt-8 mt-8">
-                         <h3 className="text-lg font-bold text-slate-500 mb-4 uppercase tracking-wider">Developer Zone</h3>
-                         <div className="bg-slate-50 p-6 rounded-lg border border-slate-200 flex items-center justify-between">
-                            <div>
-                                <p className="font-semibold text-slate-800">Permission Issues?</p>
-                                <p className="text-sm text-slate-600">If you are the site owner but locked out of the Admin Dashboard.</p>
-                            </div>
-                            <button onClick={handlePromoteSelf} className="px-4 py-2 bg-slate-800 text-white rounded-md hover:bg-slate-900 transition-colors text-sm font-medium">
-                                Promote Self to Admin
-                            </button>
-                         </div>
                     </div>
                 </div>
             </main>

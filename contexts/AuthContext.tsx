@@ -12,7 +12,7 @@ import {
     EmailAuthProvider,
     reauthenticateWithCredential
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 type AuthResponse = {
     success: boolean;
@@ -35,12 +35,12 @@ type AuthContextType = {
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
-// Helper to remove undefined values for Firestore
+// Helper to remove undefined values because Firestore does not support them
 const sanitizeData = (data: any) => {
-  const cleaned = { ...data };
-  Object.keys(cleaned).forEach(key => {
-    if (cleaned[key] === undefined) {
-      delete cleaned[key];
+  const cleaned: any = {};
+  Object.keys(data).forEach(key => {
+    if (data[key] !== undefined) {
+      cleaned[key] = data[key];
     }
   });
   return cleaned;
@@ -54,7 +54,6 @@ export const AuthProvider = ({ children }: React.PropsWithChildren) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         // 1. Setup default user object from Auth data
-        // Explicitly handle optional fields to avoid undefined values
         const baseUser: any = {
              id: firebaseUser.uid,
              email: firebaseUser.email || '',
@@ -73,7 +72,6 @@ export const AuthProvider = ({ children }: React.PropsWithChildren) => {
             const userDoc = await getDoc(userDocRef);
             
             if (userDoc.exists()) {
-                // 2. If profile exists in Firestore, use that data (including Role)
                 const userData = userDoc.data();
                 finalUser = { 
                     ...finalUser, 
@@ -81,16 +79,15 @@ export const AuthProvider = ({ children }: React.PropsWithChildren) => {
                     role: (userData.role as UserRole) || UserRole.USER 
                 } as User;
             } else {
-                // 3. If no profile exists (e.g. first Google login), create one
+                // If no profile exists, create one safely
                 try {
-                    // Sanitize just in case
                     await setDoc(userDocRef, sanitizeData(finalUser));
                 } catch (writeErr) {
-                    console.error("Error creating user profile in Firestore:", writeErr);
+                    console.error("Error creating user profile:", writeErr);
                 }
             }
         } catch (error) {
-            console.error("Error fetching user profile from Firestore:", error);
+            console.error("Error fetching user profile:", error);
         }
 
         setUser(finalUser);
@@ -116,12 +113,10 @@ export const AuthProvider = ({ children }: React.PropsWithChildren) => {
         }
         return { success: false, message: "Password is required." };
     } catch (error: any) {
-        console.error("Sign in error code:", error.code);
+        console.error("Sign in error:", error.code);
         let message = "Failed to sign in.";
         if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
             message = "Invalid email or password.";
-        } else if (error.code === 'auth/too-many-requests') {
-            message = "Too many failed attempts. Please try again later.";
         }
         return { success: false, message };
     }
@@ -136,18 +131,18 @@ export const AuthProvider = ({ children }: React.PropsWithChildren) => {
             username,
             role: UserRole.USER,
         };
-        // Explicitly create Firestore document immediately after Auth creation
+        
+        // Create Firestore document immediately
         try {
             await setDoc(doc(db, 'users', userCredential.user.uid), sanitizeData(newUser));
         } catch (e) {
-            console.error("Error creating Firestore profile for new user:", e);
+            console.error("Error creating Firestore profile:", e);
         }
         return { success: true };
     } catch (error: any) {
         console.error("Sign up error", error);
         let message = "Failed to sign up.";
         if (error.code === 'auth/email-already-in-use') message = "Email already in use.";
-        else if (error.code === 'auth/weak-password') message = "Password too weak.";
         return { success: false, message };
     }
   };
@@ -156,11 +151,9 @@ export const AuthProvider = ({ children }: React.PropsWithChildren) => {
     if (user) {
       try {
         const userDocRef = doc(db, 'users', user.id);
-        // Sanitize data to ensure no undefined values are sent
         const safeDetails = sanitizeData(details);
         
-        // Use setDoc with merge: true to handle cases where the document might not exist yet
-        // This prevents "No document to update" errors if the initial creation failed or lagged
+        // Use setDoc with merge: true to avoid 'No document to update' errors
         await setDoc(userDocRef, safeDetails, { merge: true });
         
         setUser(prev => prev ? ({ ...prev, ...safeDetails }) : null);
@@ -174,7 +167,7 @@ export const AuthProvider = ({ children }: React.PropsWithChildren) => {
       try {
           const userDocRef = doc(db, 'users', userId);
           const safeDetails = sanitizeData(details);
-          // Use setDoc with merge for robustness
+          // Use setDoc with merge: true for robustness
           await setDoc(userDocRef, safeDetails, { merge: true });
           
           if(user && user.id === userId) {
