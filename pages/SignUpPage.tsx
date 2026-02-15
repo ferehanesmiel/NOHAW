@@ -37,56 +37,67 @@ const SignUpPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex bg-gray-50">
-             <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
-                 <div className="mx-auto w-full max-w-sm lg:w-96">
+        <div className="min-h-screen flex bg-slate-50">
+             {/* Form Section */}
+             <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24 bg-[var(--bg-main)]">
+                 <div className="mx-auto w-full max-w-sm lg:w-96 bg-[var(--bg-primary)] p-8 rounded-2xl shadow-xl border border-[var(--border-color)]">
                     <div>
                         <Link to="/" className="inline-block mb-6">
                             <LogoIcon />
                         </Link>
-                        <h2 className="text-3xl font-bold text-gray-900">{t('signUpForAccount')}</h2>
+                        <h2 className="text-3xl font-bold text-[var(--text-primary)]">{t('signUpForAccount')}</h2>
                     </div>
 
                     <div className="mt-8">
                          <form className="space-y-6" onSubmit={handleSubmit}>
                              <div>
-                                <label htmlFor="username" className="block text-sm font-medium text-gray-700">{t('username')}</label>
+                                <label htmlFor="username" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">{t('username')}</label>
                                 <div className="mt-1"><input id="username" type="text" required value={username} onChange={(e) => setUsername(e.target.value)} className="elegant-input"/></div>
                             </div>
                              <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-700">{t('email')}</label>
+                                <label htmlFor="email" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">{t('email')}</label>
                                 <div className="mt-1"><input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="elegant-input"/></div>
                             </div>
                             <div>
-                                <label htmlFor="password"  className="block text-sm font-medium text-gray-700">{t('password')}</label>
+                                <label htmlFor="password"  className="block text-sm font-medium text-[var(--text-secondary)] mb-1">{t('password')}</label>
                                  <div className="mt-1"><input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="elegant-input"/></div>
                             </div>
                             
-                            {error && <p className="text-sm text-red-600">{error}</p>}
+                            {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>}
 
                             <div><button type="submit" className="w-full elegant-button">{t('signUp')}</button></div>
                         </form>
 
                          <div className="mt-6">
                             <div className="relative">
-                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300" /></div>
-                                <div className="relative flex justify-center text-sm"><span className="px-2 bg-gray-50 text-gray-500">Or sign up with</span></div>
+                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[var(--border-color)]" /></div>
+                                <div className="relative flex justify-center text-sm"><span className="px-2 bg-[var(--bg-primary)] text-[var(--text-secondary)]">Or sign up with</span></div>
                             </div>
                             <div className="mt-6">
-                                <button onClick={handleGoogleSignIn} className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <button onClick={handleGoogleSignIn} className="w-full inline-flex justify-center py-2 px-4 border border-[var(--border-color)] rounded-md shadow-sm bg-[var(--bg-primary)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors">
                                     <GoogleIcon /><span>{t('signInWithGoogle')}</span>
                                 </button>
                             </div>
                         </div>
-                        <p className="mt-6 text-center text-sm text-gray-600">
+                        <p className="mt-6 text-center text-sm text-[var(--text-secondary)]">
                             {t('alreadyHaveAccount')}{' '}
                             <Link to="/signin" className="font-medium text-[--accent] hover:text-[--accent-hover]">{t('signIn')}</Link>
                         </p>
                     </div>
                 </div>
             </div>
-             <div className="hidden lg:block relative w-0 flex-1 bg-gray-800">
-                <img className="absolute inset-0 h-full w-full object-cover" src="https://images.unsplash.com/photo-1505373877841-8d25f7d46678?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80" alt="People at a conference" />
+             {/* Image Section - Agenda 2063 Art Style */}
+             <div className="hidden lg:block relative w-0 flex-1 bg-white overflow-hidden">
+                <img 
+                    className="absolute inset-0 h-full w-full object-cover pencil-art" 
+                    src="https://images.unsplash.com/photo-1616075147828-56eb034d6350?q=80&w=1770&auto=format&fit=crop" 
+                    alt="African Innovation and Future Art" 
+                />
+                <div className="absolute inset-0 bg-orange-900/10 mix-blend-multiply"></div>
+                <div className="absolute top-10 right-10 text-slate-800 bg-white/80 backdrop-blur-sm p-4 rounded-lg max-w-md shadow-lg border border-slate-200 text-right">
+                    <p className="font-bold text-lg">Unity and Progress</p>
+                    <p className="text-sm">Building the Africa of 2063 through shared knowledge.</p>
+                </div>
             </div>
         </div>
     );

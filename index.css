@@ -5,25 +5,31 @@
 
 /* Base component styles are now defined in modern.css using theme variables */
 .elegant-button {
-    background-color: var(--accent);
+    background-image: var(--primary-gradient);
     color: var(--btn-text);
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 8px;
     padding: 10px 24px;
     font-weight: 600;
-    box-shadow: var(--shadow-sm);
+    border: none;
+    box-shadow: var(--btn-shadow);
 }
 
 .elegant-button:hover {
-    background-color: var(--accent-hover);
+    background-image: var(--primary-gradient-hover);
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md), 0 0 15px var(--accent-fire-glow);
+    box-shadow: 0 8px 20px -4px rgba(124, 58, 237, 0.5);
+    filter: brightness(1.1);
+}
+
+.elegant-button:active {
+    transform: translateY(0);
 }
 
 .elegant-button-outline {
-    background-color: var(--btn-outline-bg);
+    background-color: transparent;
     color: var(--accent);
-    border: 1px solid var(--accent);
+    border: 2px solid var(--accent);
     transition: all 0.3s ease;
     border-radius: 8px;
     padding: 10px 24px;
@@ -34,34 +40,46 @@
     background-color: var(--accent);
     color: var(--btn-text);
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md), 0 0 15px var(--accent-fire-glow);
+    box-shadow: var(--btn-shadow);
 }
 
 .elegant-card {
     background-color: var(--bg-primary);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    box-shadow: var(--shadow-lg);
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
     transition: all 0.3s ease;
 }
 
 .elegant-card:hover {
-    box-shadow: var(--shadow-xl), 0 0 20px -5px var(--accent-fire-glow);
+    box-shadow: var(--shadow-xl);
     transform: translateY(-6px);
+    border-color: var(--accent);
 }
 
 .elegant-input {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
     color: var(--text-primary);
     border-radius: 8px;
     padding: 12px 14px;
     width: 100%;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+html[data-theme='dark'] .elegant-input {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
 }
 
 .elegant-input:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-glow), 0 0 0 4px var(--accent-fire-glow);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+html[data-theme='dark'] .elegant-input:focus {
+    background-color: var(--bg-secondary);
 }
