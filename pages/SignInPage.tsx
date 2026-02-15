@@ -6,7 +6,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { LogoIcon, GoogleIcon } from '../components/icons';
 import { HeroContent } from '../types';
 import { db } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 const SignInPage: React.FC = () => {
     const [email, setEmail] = React.useState('');
@@ -26,20 +26,16 @@ const SignInPage: React.FC = () => {
         }
     }, [isAuthenticated, isAdmin, navigate]);
 
-    // Fetch Admin Settings for Image
+    // Fetch Admin Settings for Image - Realtime
     React.useEffect(() => {
-        const fetchSettings = async () => {
-            try {
-                const docSnap = await getDoc(doc(db, 'settings', 'hero'));
-                if(docSnap.exists()) {
-                    const data = docSnap.data() as HeroContent;
-                    if(data.signInImageUrl) setSignInImageUrl(data.signInImageUrl);
-                }
-            } catch (err) {
-                console.error("Failed to load page settings", err);
+        const unsub = onSnapshot(doc(db, 'settings', 'hero'), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data() as HeroContent;
+                if (data.signInImageUrl) setSignInImageUrl(data.signInImageUrl);
             }
-        };
-        fetchSettings();
+        }, (err) => console.error("Failed to load page settings", err));
+        
+        return () => unsub();
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {

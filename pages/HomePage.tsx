@@ -11,7 +11,7 @@ import BottomNav from '../components/BottomNav';
 import { useAuth } from '../contexts/AuthContext';
 import { useCourse } from '../contexts/CourseContext';
 import { db } from '../firebase';
-import { doc, collection, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, collection, onSnapshot } from 'firebase/firestore';
 
 const NewsCard: React.FC<{ article: NewsArticle }> = ({ article }) => (
     <div className="group h-80 [perspective:1000px]">
@@ -76,16 +76,12 @@ const HomePage: React.FC = () => {
     });
 
     React.useEffect(() => {
-        // Fetch Hero Content (One-time fetch is usually sufficient for Hero, or use onSnapshot if preferred)
-        const fetchHero = async () => {
-            try {
-                const heroSnap = await getDoc(doc(db, 'settings', 'hero'));
-                if(heroSnap.exists()) setHeroContent(heroSnap.data() as HeroContent);
-            } catch (error) {
-                console.error("Error fetching hero data:", error);
+        // Real-time Hero Content
+        const unsubHero = onSnapshot(doc(db, 'settings', 'hero'), (docSnap) => {
+            if (docSnap.exists()) {
+                setHeroContent(docSnap.data() as HeroContent);
             }
-        };
-        fetchHero();
+        }, (error) => console.error("Error fetching hero data:", error));
 
         // Real-time News
         const unsubNews = onSnapshot(collection(db, 'news'), (snapshot) => {
@@ -98,6 +94,7 @@ const HomePage: React.FC = () => {
         }, (error) => console.error("Error fetching testimonials:", error));
 
         return () => {
+            unsubHero();
             unsubNews();
             unsubTestimonials();
         };

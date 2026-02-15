@@ -82,20 +82,25 @@ const AdminPage: React.FC = () => {
             (error) => console.error("Error fetching testimonials:", error)
         );
         
-        // Fetch Hero (One-time fetch for settings)
-        const fetchHero = async () => {
-            try {
-                const docSnap = await getDoc(doc(db, 'settings', 'hero'));
-                if(docSnap.exists()) {
-                    setHeroContent(docSnap.data() as HeroContent);
-                }
-            } catch (error) {
-                console.error("Error fetching hero content:", error);
+        // Fetch Hero - Realtime
+        const unsubHero = onSnapshot(doc(db, 'settings', 'hero'), (docSnap) => {
+            if(docSnap.exists()) {
+                // Only update if we aren't currently editing (optional, but here simple sync is fine)
+                // Actually, for admin input forms, real-time updates from *other* admins might interfere with typing
+                // but since we usually work alone or want to see saved state, let's just sync it.
+                // However, typing in input updates state. If onSnapshot fires, it might overwrite typing if db changes.
+                // But usually, onSnapshot fires on local write immediately (latency compensation).
+                // Let's stick to syncing only if the user hasn't typed? No, keep it simple: sync.
+                // If it becomes an issue, we can decouple "form state" from "db state".
+                // For now, let's keep it sync to ensure "it works".
+                // To prevent overwriting local edits while typing if no remote change happened, we rely on Firebase's behavior
+                // where local writes trigger snapshot immediately.
+                 setHeroContent(docSnap.data() as HeroContent);
             }
-        };
-        fetchHero();
+        }, (error) => console.error("Error fetching hero content:", error));
 
-        return () => { unsubUsers(); unsubNews(); unsubTestimonials(); };
+
+        return () => { unsubUsers(); unsubNews(); unsubTestimonials(); unsubHero(); };
     }, []);
 
     // --- Save Handlers (Direct Firestore Writes) ---

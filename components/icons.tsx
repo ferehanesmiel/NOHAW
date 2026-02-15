@@ -2,17 +2,11 @@
 import * as React from 'react';
 
 export const LogoIcon = () => (
-    <div className="flex items-center gap-3">
-        <div className="relative flex items-center justify-center w-8 h-8">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-[--accent]">
-                <path d="M12 2L21 7V17L12 22L3 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M12 22V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M12 12L21 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M12 12L3 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="12" cy="12" r="2" fill="currentColor" />
-            </svg>
+    <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 shadow-lg shadow-indigo-500/30">
+            <span className="text-white font-black text-xl tracking-tighter">N</span>
         </div>
-        <span className="font-extrabold text-2xl tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-[--accent] to-indigo-500">
+        <span className="font-extrabold text-2xl tracking-tighter text-slate-900 dark:text-white">
             NOHAW
         </span>
     </div>
@@ -50,7 +44,7 @@ export const GoogleIcon = () => (
         <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path>
         <path fill="#FF3D00" d="M6.306 14.691c-1.99 3.596-3.151 7.75-3.151 12.193s1.161 8.597 3.151 12.193l-5.657 5.657C.283 39.043 0 35.158 0 31s.283-8.043 1.959-11.625l4.347-4.347z"></path>
         <path fill="#4CAF50" d="M24 48c5.166 0 9.86-1.977 13.409-5.192l-5.657-5.657C30.01 39.188 27.218 40 24 40c-5.402 0-10.038-3.376-11.694-8.151l-5.657 5.657C9.043 42.617 15.824 48 24 48z"></path>
-        <path fill="#1976D2" d="M43.611 20.083H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-5.402 0-10.038-3.376-11.694-8.151l-5.657 5.657C9.043 42.617 15.824 48 24 48c5.166 0 9.86-1.977 13.409-5.192l5.657-5.657C46.046 34.043 48 29.268 48 24c0-2.92-1.04-5.62-2.733-7.79z"></path>
+        <path fill="#1976D2" d="M43.611 20.083H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-5.402 0-10.038-3.376-11.694-8.151l-5.657 5.657C46.046 34.043 48 29.268 48 24c0-2.92-1.04-5.62-2.733-7.79z"></path>
     </svg>
 );
 
