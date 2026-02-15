@@ -38,7 +38,9 @@ const AdminPage: React.FC = () => {
     const [heroContent, setHeroContent] = useLocalStorage<HeroContent>('heroContent', {
       title: 'Design Your Future.',
       subtitle: 'Discover curated courses in technology and design, crafted to elevate your skills and professional life.',
-      backgroundImageUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80'
+      backgroundImageUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80',
+      signInImageUrl: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60',
+      signUpImageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60'
     });
     
     const [isCourseModalOpen, setIsCourseModalOpen] = React.useState(false);
@@ -129,13 +131,31 @@ const AdminPage: React.FC = () => {
     const handleDeleteTestimonial = (id: string) => { if(window.confirm('Are you sure?')) setTestimonials(testimonials.filter(t => t.id !== id)); };
     
     const handleHeroChange = (field: keyof HeroContent, value: string) => { setHeroContent(p => ({ ...p, [field]: value })); };
+    
     const onHeroImageDrop = React.useCallback((acceptedFiles: File[]) => {
       const file = acceptedFiles[0];
       const reader = new FileReader();
       reader.onload = (event) => { if(event.target?.result) setHeroContent(p => ({...p, backgroundImageUrl: event.target.result as string})) };
       if(file) reader.readAsDataURL(file);
     }, [setHeroContent]);
+
+    const onSignInImageDrop = React.useCallback((acceptedFiles: File[]) => {
+      const file = acceptedFiles[0];
+      const reader = new FileReader();
+      reader.onload = (event) => { if(event.target?.result) setHeroContent(p => ({...p, signInImageUrl: event.target.result as string})) };
+      if(file) reader.readAsDataURL(file);
+    }, [setHeroContent]);
+
+    const onSignUpImageDrop = React.useCallback((acceptedFiles: File[]) => {
+      const file = acceptedFiles[0];
+      const reader = new FileReader();
+      reader.onload = (event) => { if(event.target?.result) setHeroContent(p => ({...p, signUpImageUrl: event.target.result as string})) };
+      if(file) reader.readAsDataURL(file);
+    }, [setHeroContent]);
+
     const heroDropzone = useDropzone({ onDrop: onHeroImageDrop, accept: {'image/*':[]} });
+    const signInDropzone = useDropzone({ onDrop: onSignInImageDrop, accept: {'image/*':[]} });
+    const signUpDropzone = useDropzone({ onDrop: onSignUpImageDrop, accept: {'image/*':[]} });
     
     const TabButton: React.FC<{tab: AdminTab, label: string}> = ({ tab, label }) => ( <button onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tab ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-200'}`}>{label}</button> );
 
@@ -150,14 +170,50 @@ const AdminPage: React.FC = () => {
                         <TabButton tab="users" label={t('userManagement')} />
                         <TabButton tab="news" label={t('newsManagement')} />
                         <TabButton tab="testimonials" label={t('testimonialManagement')} />
-                        <TabButton tab="hero" label={t('heroManagement')} />
+                        <TabButton tab="hero" label="Hero & Images" />
                     </div>
                     <div className="pt-6">
                         {activeTab === 'courses' && ( <div><div className="flex justify-end mb-4"><button onClick={() => openCourseModal()} className="elegant-button">{t('addCourse')}</button></div><div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Image</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('title')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('teacher')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('price')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{courses.length > 0 ? courses.map(course => (<tr key={course.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4"><img src={course.imageUrl} alt={course.title} className="w-16 h-10 object-cover rounded"/></td><td className="px-6 py-4 text-sm text-slate-900">{course.title}</td><td className="px-6 py-4 text-sm text-slate-500">{course.teacher}</td><td className="px-6 py-4 text-sm text-slate-500">{Number(course.price) > 0 ? `$${course.price}`: t('free')}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center"><button onClick={() => openCourseModal(course)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDeleteCourse(course.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={5} className="text-center py-8 text-slate-500">No courses found. Add a new one to get started.</td></tr>)}</tbody></table></div></div> )}
                         {activeTab === 'users' && ( <div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('username')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('email')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('role')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{users.length > 0 ? users.map(user => (<tr key={user.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4 text-sm text-slate-900">{user.username}</td><td className="px-6 py-4 text-sm text-slate-500">{user.email}</td><td className="px-6 py-4 text-sm text-slate-500">{user.role}</td><td className="px-6 py-4 flex items-center"><button onClick={() => openUserModal(user)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={4} className="text-center py-8 text-slate-500">No users found.</td></tr>)}</tbody></table></div> )}
                         {activeTab === 'news' && ( <div><div className="flex justify-end mb-4"><button onClick={() => openNewsModal()} className="elegant-button">{t('addNews')}</button></div><div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Image</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('title')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('date')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{news.length > 0 ? news.map(article => (<tr key={article.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4"><img src={article.imageUrl} alt={article.title} className="w-16 h-10 object-cover rounded"/></td><td className="px-6 py-4 text-sm text-slate-900">{article.title}</td><td className="px-6 py-4 text-sm text-slate-500">{article.date}</td><td className="px-6 py-4 flex items-center"><button onClick={() => openNewsModal(article)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDeleteNews(article.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={4} className="text-center py-8 text-slate-500">No news articles found.</td></tr>)}</tbody></table></div></div> )}
                         {activeTab === 'testimonials' && ( <div><div className="flex justify-end mb-4"><button onClick={() => openTestimonialModal()} className="elegant-button">{t('addTestimonial')}</button></div><div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Image</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('author')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('quote')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{testimonials.length > 0 ? testimonials.map(testimonial => (<tr key={testimonial.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4"><img src={testimonial.imageUrl} alt={testimonial.author} className="w-10 h-10 object-cover rounded-full"/></td><td className="px-6 py-4 text-sm text-slate-900">{testimonial.author}</td><td className="px-6 py-4 text-sm text-slate-500 truncate max-w-sm">{testimonial.quote}</td><td className="px-6 py-4 flex items-center"><button onClick={() => openTestimonialModal(testimonial)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDeleteTestimonial(testimonial.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={4} className="text-center py-8 text-slate-500">No testimonials found.</td></tr>)}</tbody></table></div></div> )}
-                        {activeTab === 'hero' && ( <div className="max-w-xl mx-auto"><form onSubmit={(e) => {e.preventDefault(); setHeroSaveStatus('Saved!');}}><div className="mb-4"><label htmlFor="heroTitle" className="block text-sm font-medium text-slate-700">{t('title')}</label><input type="text" id="heroTitle" value={heroContent.title} onChange={e => handleHeroChange('title', e.target.value)} className="mt-1 block w-full elegant-input" /></div><div className="mb-4"><label htmlFor="heroSubtitle" className="block text-sm font-medium text-slate-700">{t('subtitle')}</label><textarea id="heroSubtitle" value={heroContent.subtitle} onChange={e => handleHeroChange('subtitle', e.target.value)} rows={3} className="mt-1 block w-full elegant-input"></textarea></div><div><label className="block text-sm font-medium text-slate-700">{t('backgroundImage')}</label><div {...heroDropzone.getRootProps()} className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md cursor-pointer ${heroDropzone.isDragActive ? 'border-[--accent] bg-yellow-50' : ''}`}><input {...heroDropzone.getInputProps()} /><div className="space-y-1 text-center">{heroContent.backgroundImageUrl ? <img src={heroContent.backgroundImageUrl} alt="Preview" className="mx-auto h-24 w-auto"/> : <svg className="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>}<p className="text-sm text-slate-600">{t('dropImage')}</p></div></div></div><div className="flex justify-end items-center mt-4"><span className="text-sm text-slate-500 mr-4">{heroSaveStatus}</span><button type="submit" className="elegant-button">{t('save')}</button></div></form></div> )}
+                        {activeTab === 'hero' && ( 
+                            <div className="max-w-2xl mx-auto">
+                                <form onSubmit={(e) => {e.preventDefault(); setHeroSaveStatus('Saved!');}}>
+                                    <div className="mb-6">
+                                        <h3 className="text-lg font-bold text-slate-800 mb-2">Home Page Hero</h3>
+                                        <div className="mb-4"><label htmlFor="heroTitle" className="block text-sm font-medium text-slate-700">{t('title')}</label><input type="text" id="heroTitle" value={heroContent.title} onChange={e => handleHeroChange('title', e.target.value)} className="mt-1 block w-full elegant-input" /></div>
+                                        <div className="mb-4"><label htmlFor="heroSubtitle" className="block text-sm font-medium text-slate-700">{t('subtitle')}</label><textarea id="heroSubtitle" value={heroContent.subtitle} onChange={e => handleHeroChange('subtitle', e.target.value)} rows={3} className="mt-1 block w-full elegant-input"></textarea></div>
+                                        <div><label className="block text-sm font-medium text-slate-700">{t('backgroundImage')}</label><div {...heroDropzone.getRootProps()} className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md cursor-pointer ${heroDropzone.isDragActive ? 'border-[--accent] bg-yellow-50' : ''}`}><input {...heroDropzone.getInputProps()} /><div className="space-y-1 text-center">{heroContent.backgroundImageUrl ? <img src={heroContent.backgroundImageUrl} alt="Preview" className="mx-auto h-24 w-auto"/> : <svg className="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>}<p className="text-sm text-slate-600">{t('dropImage')}</p></div></div></div>
+                                    </div>
+                                    
+                                    <div className="border-t border-slate-200 my-6 pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <h3 className="text-lg font-bold text-slate-800 mb-2">Sign In Page Image</h3>
+                                            <div {...signInDropzone.getRootProps()} className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md cursor-pointer ${signInDropzone.isDragActive ? 'border-[--accent] bg-yellow-50' : ''}`}>
+                                                <input {...signInDropzone.getInputProps()} />
+                                                <div className="space-y-1 text-center">
+                                                    {heroContent.signInImageUrl ? <img src={heroContent.signInImageUrl} alt="Sign In Preview" className="mx-auto h-24 w-auto object-cover"/> : <span className="text-slate-400">No Image</span>}
+                                                    <p className="text-xs text-slate-600">Drop Sign In Image</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-slate-800 mb-2">Sign Up Page Image</h3>
+                                            <div {...signUpDropzone.getRootProps()} className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md cursor-pointer ${signUpDropzone.isDragActive ? 'border-[--accent] bg-yellow-50' : ''}`}>
+                                                <input {...signUpDropzone.getInputProps()} />
+                                                <div className="space-y-1 text-center">
+                                                    {heroContent.signUpImageUrl ? <img src={heroContent.signUpImageUrl} alt="Sign Up Preview" className="mx-auto h-24 w-auto object-cover"/> : <span className="text-slate-400">No Image</span>}
+                                                    <p className="text-xs text-slate-600">Drop Sign Up Image</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end items-center mt-4"><span className="text-sm text-slate-500 mr-4">{heroSaveStatus}</span><button type="submit" className="elegant-button">{t('save')}</button></div>
+                                </form>
+                            </div> 
+                        )}
                     </div>
                 </div>
             </main>

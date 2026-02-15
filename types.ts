@@ -44,6 +44,8 @@ export interface HeroContent {
   title: string;
   subtitle: string;
   backgroundImageUrl: string;
+  signInImageUrl?: string;
+  signUpImageUrl?: string;
 }
 
 export interface NewsArticle {

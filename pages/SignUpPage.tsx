@@ -4,6 +4,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { LogoIcon, GoogleIcon } from '../components/icons';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { HeroContent } from '../types';
 
 const SignUpPage: React.FC = () => {
     const [username, setUsername] = React.useState('');
@@ -13,6 +15,14 @@ const SignUpPage: React.FC = () => {
     const { signUp, signIn, isAuthenticated, isAdmin } = useAuth();
     const { t } = useLanguage();
     const navigate = useNavigate();
+    
+    // Retrieve dynamic images from local storage (managed in Admin)
+    const [heroContent] = useLocalStorage<HeroContent>('heroContent', {
+      title: 'Design Your Future.',
+      subtitle: 'Discover curated courses.',
+      backgroundImageUrl: '',
+      signUpImageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60'
+    });
 
     React.useEffect(() => {
         if (isAuthenticated) {
@@ -68,10 +78,15 @@ const SignUpPage: React.FC = () => {
                             <div><button type="submit" className="w-full elegant-button">{t('signUp')}</button></div>
                         </form>
 
-                         <div className="mt-6">
+                         <div className="mt-8">
                             <div className="relative">
-                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[var(--border-color)]" /></div>
-                                <div className="relative flex justify-center text-sm"><span className="px-2 bg-[var(--bg-primary)] text-[var(--text-secondary)]">Or sign up with</span></div>
+                                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                                    <div className="w-full border-t border-slate-300 dark:border-slate-600" />
+                                </div>
+                                <div className="relative flex justify-center text-sm">
+                                    {/* FIX: Ensure background matches card background exactly and verify z-index */}
+                                    <span className="px-4 bg-[var(--bg-primary)] text-[var(--text-secondary)] font-medium z-10">Or sign up with</span>
+                                </div>
                             </div>
                             <div className="mt-6">
                                 <button onClick={handleGoogleSignIn} className="w-full inline-flex justify-center py-2 px-4 border border-[var(--border-color)] rounded-md shadow-sm bg-[var(--bg-primary)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors">
@@ -86,11 +101,11 @@ const SignUpPage: React.FC = () => {
                     </div>
                 </div>
             </div>
-             {/* Image Section - Agenda 2063 Art Style */}
+             {/* Image Section - Agenda 2063 Art Style / Dynamic */}
              <div className="hidden lg:block relative w-0 flex-1 bg-white overflow-hidden">
                 <img 
                     className="absolute inset-0 h-full w-full object-cover pencil-art" 
-                    src="https://images.unsplash.com/photo-1616075147828-56eb034d6350?q=80&w=1770&auto=format&fit=crop" 
+                    src={heroContent.signUpImageUrl || 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60'} 
                     alt="African Innovation and Future Art" 
                 />
                 <div className="absolute inset-0 bg-orange-900/10 mix-blend-multiply"></div>

@@ -4,6 +4,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { LogoIcon, GoogleIcon } from '../components/icons';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { HeroContent } from '../types';
 
 const SignInPage: React.FC = () => {
     const [email, setEmail] = React.useState('');
@@ -12,6 +14,14 @@ const SignInPage: React.FC = () => {
     const { signIn, isAuthenticated, isAdmin } = useAuth();
     const { t } = useLanguage();
     const navigate = useNavigate();
+    
+    // Retrieve dynamic images from local storage (managed in Admin)
+    const [heroContent] = useLocalStorage<HeroContent>('heroContent', {
+      title: 'Design Your Future.',
+      subtitle: 'Discover curated courses.',
+      backgroundImageUrl: '',
+      signInImageUrl: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60',
+    });
 
     React.useEffect(() => {
         if (isAuthenticated) {
@@ -33,11 +43,11 @@ const SignInPage: React.FC = () => {
 
     return (
         <div className="min-h-screen flex bg-slate-50">
-            {/* Image Section - Agenda 2063 Art Style */}
+            {/* Image Section - Agenda 2063 Art Style / Dynamic */}
             <div className="hidden lg:block relative w-0 flex-1 bg-white overflow-hidden">
                 <img
                     className="absolute inset-0 h-full w-full object-cover pencil-art"
-                    src="https://images.unsplash.com/photo-15422596594ab-d716d9b3a776?q=80&w=2070&auto=format&fit=crop"
+                    src={heroContent.signInImageUrl || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60'}
                     alt="African Agenda 2063 Art - Future and Tradition"
                 />
                 <div className="absolute inset-0 bg-indigo-900/10 mix-blend-multiply"></div>
@@ -82,13 +92,14 @@ const SignInPage: React.FC = () => {
                             </div>
                         </form>
 
-                         <div className="mt-6">
+                         <div className="mt-8">
                             <div className="relative">
-                                <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-[var(--border-color)]" />
+                                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                                    <div className="w-full border-t border-slate-300 dark:border-slate-600" />
                                 </div>
                                 <div className="relative flex justify-center text-sm">
-                                    <span className="px-2 bg-[var(--bg-primary)] text-[var(--text-secondary)]">Or continue with</span>
+                                    {/* FIX: Ensure background matches card background exactly and verify z-index */}
+                                    <span className="px-4 bg-[var(--bg-primary)] text-[var(--text-secondary)] font-medium z-10">Or continue with</span>
                                 </div>
                             </div>
 
