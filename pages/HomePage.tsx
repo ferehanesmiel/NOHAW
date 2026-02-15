@@ -84,15 +84,14 @@ const HomePage: React.FC = () => {
                 
                 // Fetch News (limit 2)
                 const newsSnap = await getDocs(collection(db, 'news'));
-                const newsData = newsSnap.docs.map(d => ({id:d.id, ...d.data()} as NewsArticle));
-                setNews(newsData);
+                setNews(newsSnap.docs.map(d => ({id:d.id, ...d.data()} as NewsArticle)));
                 
                 // Fetch Testimonials
                 const testSnap = await getDocs(collection(db, 'testimonials'));
-                const testData = testSnap.docs.map(d => ({id:d.id, ...d.data()} as Testimonial));
-                setTestimonials(testData);
+                setTestimonials(testSnap.docs.map(d => ({id:d.id, ...d.data()} as Testimonial)));
+
             } catch (error) {
-                console.warn("Failed to fetch homepage data (Offline or unconfigured Firebase). Using default/empty content.", error);
+                console.error("Error fetching homepage data:", error);
             }
         };
         fetchData();

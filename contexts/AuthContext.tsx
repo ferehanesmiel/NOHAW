@@ -14,11 +14,16 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
+type AuthResponse = {
+    success: boolean;
+    message?: string;
+};
+
 type AuthContextType = {
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password?: string, isGoogleSignIn?: boolean) => Promise<boolean>;
-  signUp: (email: string, password: string, username: string) => Promise<boolean>;
+  signIn: (email: string, password?: string, isGoogleSignIn?: boolean) => Promise<AuthResponse>;
+  signUp: (email: string, password: string, username: string) => Promise<AuthResponse>;
   signOut: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
@@ -37,44 +42,42 @@ export const AuthProvider = ({ children }: React.PropsWithChildren) => {
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Fetch extra user details from Firestore
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        
+        // Default object with basic info
+        let finalUser: User = {
+             id: firebaseUser.uid,
+             email: firebaseUser.email || '',
+             username: firebaseUser.displayName || 'User',
+             role: UserRole.USER, // Default to USER, fetching real role below
+             profilePictureUrl: firebaseUser.photoURL || undefined
+        };
+
+        // Fetch details from Firestore
         try {
+            const userDocRef = doc(db, 'users', firebaseUser.uid);
             const userDoc = await getDoc(userDocRef);
             
             if (userDoc.exists()) {
-                setUser({ id: firebaseUser.uid, ...userDoc.data() } as User);
+                const userData = userDoc.data();
+                finalUser = { 
+                    ...finalUser, 
+                    ...userData, 
+                    // Ensure role comes from DB, defaulting to USER if missing
+                    role: (userData.role as UserRole) || UserRole.USER 
+                } as User;
             } else {
-                // Fallback for google sign in first time if not caught in signIn
-                const newUser: User = {
-                    id: firebaseUser.uid,
-                    email: firebaseUser.email || '',
-                    username: firebaseUser.displayName || 'User',
-                    role: UserRole.USER,
-                    profilePictureUrl: firebaseUser.photoURL || undefined
-                };
-                
-                // Attempt to create doc, catch error if offline/permission denied but don't crash app
+                // If user doc doesn't exist (e.g. first Google Sign In), create it
+                // Default to USER. You can manually change specific users to ADMIN in Firestore console.
                 try {
-                    await setDoc(userDocRef, newUser);
+                    await setDoc(userDocRef, finalUser);
                 } catch (writeErr) {
-                    console.warn("Could not create user document in Firestore (Offline or Permission issue):", writeErr);
+                    console.error("Error creating user profile:", writeErr);
                 }
-                
-                setUser(newUser);
             }
         } catch (error) {
-            console.warn("Failed to fetch user data (Offline or Config issue). Falling back to basic Auth profile.", error);
-            // Fallback to basic auth info so app works offline
-            setUser({
-                id: firebaseUser.uid,
-                email: firebaseUser.email || '',
-                username: firebaseUser.displayName || 'User',
-                role: UserRole.USER,
-                profilePictureUrl: firebaseUser.photoURL || undefined
-            });
+            console.error("Error fetching user profile:", error);
         }
+
+        setUser(finalUser);
       } else {
         setUser(null);
       }
@@ -84,40 +87,56 @@ export const AuthProvider = ({ children }: React.PropsWithChildren) => {
     return unsubscribe;
   }, []);
 
-  const signIn = async (email: string, password?: string, isGoogleSignIn = false): Promise<boolean> => {
+  const signIn = async (email: string, password?: string, isGoogleSignIn = false): Promise<AuthResponse> => {
     try {
         if (isGoogleSignIn) {
             await signInWithPopup(auth, googleProvider);
-            // onAuthStateChanged will handle the rest
-            return true;
+            return { success: true };
         }
 
         if (password) {
             await signInWithEmailAndPassword(auth, email, password);
-            return true;
+            return { success: true };
         }
-        return false;
-    } catch (error) {
-        console.error("Sign in error", error);
-        return false;
+        return { success: false, message: "Password is required." };
+    } catch (error: any) {
+        console.error("Sign in error code:", error.code);
+        let message = "Failed to sign in.";
+        
+        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            message = "Invalid email or password.";
+        } else if (error.code === 'auth/too-many-requests') {
+            message = "Too many failed attempts. Please try again later.";
+        } else if (error.code === 'auth/network-request-failed') {
+            message = "Network error. Check connection.";
+        }
+        
+        return { success: false, message };
     }
   };
 
-  const signUp = async (email: string, password: string, username: string): Promise<boolean> => {
+  const signUp = async (email: string, password: string, username: string): Promise<AuthResponse> => {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const newUser: User = {
             id: userCredential.user.uid,
             email,
             username,
-            role: UserRole.USER, // Default role
+            role: UserRole.USER, // Default new signups to USER
         };
-        // Create user document in Firestore
-        await setDoc(doc(db, 'users', userCredential.user.uid), newUser);
-        return true;
-    } catch (error) {
+        try {
+            await setDoc(doc(db, 'users', userCredential.user.uid), newUser);
+        } catch (e) {
+            console.error("Error creating Firestore profile for new user:", e);
+        }
+        return { success: true };
+    } catch (error: any) {
         console.error("Sign up error", error);
-        return false;
+        let message = "Failed to sign up.";
+        if (error.code === 'auth/email-already-in-use') message = "Email already in use.";
+        else if (error.code === 'auth/weak-password') message = "Password too weak.";
+        else if (error.code === 'auth/invalid-email') message = "Invalid email.";
+        return { success: false, message };
     }
   };
   
@@ -134,32 +153,25 @@ export const AuthProvider = ({ children }: React.PropsWithChildren) => {
   };
 
   const updateUserDetails = async (userId: string, details: Partial<User>) => {
-      // Admin function to update other users
       const userDocRef = doc(db, 'users', userId);
       await updateDoc(userDocRef, details);
-      // If updating self
       if(user && user.id === userId) {
           setUser(prev => prev ? ({ ...prev, ...details }) : null);
       }
   };
   
   const deleteUser = (userId: string) => {
-      // Note: deleting users from Auth requires Admin SDK (backend). 
-      // From client, we can only delete data from Firestore or delete the CURRENTLY logged in user.
-      // For this demo, we will just alert.
-      alert("Deleting users requires backend Admin SDK integration in a real production environment. In this demo, you can only manage Firestore data.");
+      alert("Deleting users requires backend Admin SDK. This is a frontend-only demo action.");
   }
 
   const changePassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
     if (!auth.currentUser || !auth.currentUser.email) return false;
-    
     try {
         const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
         await reauthenticateWithCredential(auth.currentUser, credential);
         await updatePassword(auth.currentUser, newPassword);
         return true;
     } catch (e) {
-        console.error("Password change failed", e);
         return false;
     }
   };

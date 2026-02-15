@@ -12,6 +12,7 @@ const SignUpPage: React.FC = () => {
     const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
+    const [isLoading, setIsLoading] = React.useState(false);
     const { signUp, signIn, isAuthenticated, isAdmin } = useAuth();
     const { t } = useLanguage();
     const navigate = useNavigate();
@@ -30,20 +31,32 @@ const SignUpPage: React.FC = () => {
         }
     }, [isAuthenticated, isAdmin, navigate]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
+
         if (!username || !password || !email) {
             setError('Please fill out all fields.');
             return;
         }
-        const success = signUp(email, password, username);
-        if(!success) {
-            setError('An account with this email already exists.');
+
+        setIsLoading(true);
+        const result = await signUp(email, password, username);
+        
+        if(!result.success) {
+            setError(result.message || 'Failed to sign up.');
+            setIsLoading(false);
         }
+        // Success redirect handled by useEffect
     };
     
-    const handleGoogleSignIn = () => {
-        signIn('user@google.com', undefined, true);
+    const handleGoogleSignIn = async () => {
+        setIsLoading(true);
+        const result = await signIn('user@google.com', undefined, true);
+        if(!result.success) {
+            setError(result.message || 'Google Sign In failed');
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -73,9 +86,17 @@ const SignUpPage: React.FC = () => {
                                  <div className="mt-1"><input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="elegant-input"/></div>
                             </div>
                             
-                            {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>}
+                            {error && (
+                                <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md border border-red-200">
+                                    {error}
+                                </div>
+                            )}
 
-                            <div><button type="submit" className="w-full elegant-button">{t('signUp')}</button></div>
+                            <div>
+                                <button type="submit" disabled={isLoading} className="w-full elegant-button disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {isLoading ? 'Creating Account...' : t('signUp')}
+                                </button>
+                            </div>
                         </form>
 
                          <div className="mt-8">
@@ -84,12 +105,11 @@ const SignUpPage: React.FC = () => {
                                     <div className="w-full border-t border-slate-300 dark:border-slate-600" />
                                 </div>
                                 <div className="relative flex justify-center text-sm">
-                                    {/* FIX: Ensure background matches card background exactly and verify z-index */}
                                     <span className="px-4 bg-[var(--bg-primary)] text-[var(--text-secondary)] font-medium z-10">Or sign up with</span>
                                 </div>
                             </div>
                             <div className="mt-6">
-                                <button onClick={handleGoogleSignIn} className="w-full inline-flex justify-center py-2 px-4 border border-[var(--border-color)] rounded-md shadow-sm bg-[var(--bg-primary)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors">
+                                <button onClick={handleGoogleSignIn} disabled={isLoading} className="w-full inline-flex justify-center py-2 px-4 border border-[var(--border-color)] rounded-md shadow-sm bg-[var(--bg-primary)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors">
                                     <GoogleIcon /><span>{t('signInWithGoogle')}</span>
                                 </button>
                             </div>

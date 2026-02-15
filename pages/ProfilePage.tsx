@@ -1,15 +1,13 @@
 
 import * as React from 'react';
-import { useDropzone } from 'react-dropzone';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Testimonial } from '../types';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
 import { doc, getDocs, setDoc, deleteDoc, collection } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const ProfilePage: React.FC = () => {
     const { user, updateProfile, changePassword } = useAuth();
@@ -63,20 +61,6 @@ const ProfilePage: React.FC = () => {
         fetchTestimonials();
     }, [user]);
     
-    const onDrop = React.useCallback(async (acceptedFiles: File[]) => {
-        if(acceptedFiles.length === 0) return;
-        const file = acceptedFiles[0];
-        
-        // Upload to Firebase Storage
-        const storageRef = ref(storage, `users/${user?.id}/profile_${Date.now()}`);
-        await uploadBytes(storageRef, file);
-        const url = await getDownloadURL(storageRef);
-        
-        setProfilePicture(url);
-    }, [user]);
-
-    const { getRootProps, getInputProps } = useDropzone({ onDrop, accept: {'image/*':[]} });
-
     const handleDetailsSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         await updateProfile({
@@ -173,10 +157,16 @@ const ProfilePage: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
-                                <div {...getRootProps()} className="cursor-pointer flex-1 rounded-lg border border-dashed border-slate-300 p-4 text-center hover:bg-slate-50">
-                                    <input {...getInputProps()} />
-                                    <p className="text-sm font-medium text-slate-700">Change photo</p>
-                                    <p className="text-xs text-slate-500">Click or drag to upload</p>
+                                <div className="flex-1">
+                                    <label htmlFor="profilePicUrl" className="block text-sm font-medium text-slate-700">Profile Picture URL</label>
+                                    <input 
+                                        type="text" 
+                                        id="profilePicUrl" 
+                                        value={profilePicture || ''} 
+                                        onChange={(e) => setProfilePicture(e.target.value)} 
+                                        className="mt-1 elegant-input"
+                                        placeholder="https://..."
+                                    />
                                 </div>
                             </div>
                             <div>

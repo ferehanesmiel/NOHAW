@@ -1,5 +1,5 @@
 
-import { Course, NewsArticle, Testimonial } from '../types';
+import { Course, NewsArticle, Testimonial, User, UserRole } from '../types';
 
 export const mockCourses: Course[] = [
     { id: '1', title: 'Modern Web Development', description: 'Build dynamic, responsive websites with the latest frameworks and technologies.', category: 'Development', imageUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60', teacher: 'Alex Doe', duration: '12 Hours', rating: 4.8, price: 50, content: [{id: 'c1-1', type: 'text', value: 'Welcome to Modern Web Development! This course covers the latest in frontend and backend technologies.'}, {id: 'c1-2', type: 'video', value: 'https://www.youtube.com/embed/dQw4w9WgXcQ'}] },
@@ -15,4 +15,10 @@ export const mockNews: NewsArticle[] = [
 export const mockTestimonials: Testimonial[] = [
     { id: '1', author: 'Sarah Johnson', role: 'Web Developer', quote: 'This platform transformed my career. The hands-on projects and expert instructors were invaluable.', imageUrl: 'https://randomuser.me/api/portraits/women/44.jpg' },
     { id: '2', author: 'Michael Chen', role: 'UX Designer', quote: 'The UI/UX course was brilliant. I learned so much and was able to build a fantastic portfolio.', imageUrl: 'https://randomuser.me/api/portraits/men/32.jpg' },
+];
+
+export const mockUsers: User[] = [
+    { id: 'u1', username: 'Admin User', email: 'admin@nohaw.com', role: UserRole.ADMIN, bio: 'System Administrator', profilePictureUrl: '' },
+    { id: 'u2', username: 'Jane Student', email: 'student@nohaw.com', role: UserRole.USER, bio: 'Computer Science Student', profilePictureUrl: '' },
+    { id: 'u3', username: 'John Doe', email: 'john@nohaw.com', role: UserRole.USER, bio: 'Web Enthusiast', profilePictureUrl: '' },
 ];

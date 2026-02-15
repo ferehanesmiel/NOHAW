@@ -1,6 +1,5 @@
 
 import * as React from 'react';
-import { useDropzone } from 'react-dropzone';
 import { DragDropContext, Droppable, Draggable, DropResult, DroppableProps } from 'react-beautiful-dnd';
 import { Course, User, UserRole, HeroContent, NewsArticle, Testimonial, ContentBlock } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -8,9 +7,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCourse } from '../contexts/CourseContext';
 import Header from '../components/Header';
 import { EditIcon, DeleteIcon } from '../components/icons';
-import { db, storage } from '../firebase';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db } from '../firebase';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDoc } from 'firebase/firestore';
 
 type AdminTab = 'courses' | 'users' | 'hero' | 'news' | 'testimonials';
 
@@ -30,17 +28,10 @@ export const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
   return <Droppable {...props}>{children}</Droppable>;
 };
 
-// Helper for image upload
-const uploadImage = async (file: File, path: string): Promise<string> => {
-    const storageRef = ref(storage, `${path}/${Date.now()}_${file.name}`);
-    await uploadBytes(storageRef, file);
-    return await getDownloadURL(storageRef);
-};
-
 const AdminPage: React.FC = () => {
     const { t } = useLanguage();
-    const { updateUserDetails } = useAuth(); // deleteUser is local only in context, we use direct DB here
-    const { courses } = useCourse(); // Courses come from context (realtime)
+    const { updateUserDetails } = useAuth(); 
+    const { courses } = useCourse(); 
     
     // Local state for non-context collections
     const [users, setUsers] = React.useState<User[]>([]);
@@ -68,120 +59,130 @@ const AdminPage: React.FC = () => {
     
     const [activeTab, setActiveTab] = React.useState<AdminTab>('courses');
     const [heroSaveStatus, setHeroSaveStatus] = React.useState('');
-    const [uploading, setUploading] = React.useState(false);
 
     // Realtime Listeners
     React.useEffect(() => {
-        const unsubUsers = onSnapshot(collection(db, 'users'), snap => setUsers(snap.docs.map(d => ({id:d.id, ...d.data()} as User))));
-        const unsubNews = onSnapshot(collection(db, 'news'), snap => setNews(snap.docs.map(d => ({id:d.id, ...d.data()} as NewsArticle))));
-        const unsubTestimonials = onSnapshot(collection(db, 'testimonials'), snap => setTestimonials(snap.docs.map(d => ({id:d.id, ...d.data()} as Testimonial))));
+        // Users
+        const unsubUsers = onSnapshot(collection(db, 'users'), 
+            (snap) => setUsers(snap.docs.map(d => ({id:d.id, ...d.data()} as User))),
+            (error) => console.error("Error fetching users:", error)
+        );
+
+        // News
+        const unsubNews = onSnapshot(collection(db, 'news'), 
+            (snap) => setNews(snap.docs.map(d => ({id:d.id, ...d.data()} as NewsArticle))),
+            (error) => console.error("Error fetching news:", error)
+        );
+
+        // Testimonials
+        const unsubTestimonials = onSnapshot(collection(db, 'testimonials'), 
+            (snap) => setTestimonials(snap.docs.map(d => ({id:d.id, ...d.data()} as Testimonial))),
+            (error) => console.error("Error fetching testimonials:", error)
+        );
         
-        // Fetch Hero
+        // Fetch Hero (One-time fetch for settings)
         const fetchHero = async () => {
-            const docSnap = await getDoc(doc(db, 'settings', 'hero'));
-            if(docSnap.exists()) setHeroContent(docSnap.data() as HeroContent);
+            try {
+                const docSnap = await getDoc(doc(db, 'settings', 'hero'));
+                if(docSnap.exists()) {
+                    setHeroContent(docSnap.data() as HeroContent);
+                }
+            } catch (error) {
+                console.error("Error fetching hero content:", error);
+            }
         };
         fetchHero();
 
         return () => { unsubUsers(); unsubNews(); unsubTestimonials(); };
     }, []);
 
-    // --- Image Upload Handlers ---
-    
-    const handleCourseImageDrop = async (acceptedFiles: File[]) => {
-        if(acceptedFiles.length > 0) {
-            setUploading(true);
-            const url = await uploadImage(acceptedFiles[0], 'courses');
-            setCurrentCourse(prev => ({...prev, imageUrl: url}));
-            setUploading(false);
-        }
-    };
-    const handleNewsImageDrop = async (acceptedFiles: File[]) => {
-        if(acceptedFiles.length > 0) {
-            setUploading(true);
-            const url = await uploadImage(acceptedFiles[0], 'news');
-            setCurrentNews(prev => ({...prev, imageUrl: url}));
-            setUploading(false);
-        }
-    };
-    const handleTestimonialImageDrop = async (acceptedFiles: File[]) => {
-        if(acceptedFiles.length > 0) {
-            setUploading(true);
-            const url = await uploadImage(acceptedFiles[0], 'testimonials');
-            setCurrentTestimonial(prev => ({...prev, imageUrl: url}));
-            setUploading(false);
-        }
-    };
-    const handleHeroImageDrop = async (acceptedFiles: File[], type: 'bg' | 'signin' | 'signup') => {
-        if(acceptedFiles.length > 0) {
-            setHeroSaveStatus('Uploading...');
-            const url = await uploadImage(acceptedFiles[0], 'hero');
-            setHeroContent(prev => {
-                const newState = {...prev};
-                if(type === 'bg') newState.backgroundImageUrl = url;
-                if(type === 'signin') newState.signInImageUrl = url;
-                if(type === 'signup') newState.signUpImageUrl = url;
-                return newState;
-            });
-            setHeroSaveStatus('Image uploaded. Click Save.');
-        }
-    };
-
-
-    // --- Save Handlers (Firestore) ---
+    // --- Save Handlers (Direct Firestore Writes) ---
 
     const handleSaveCourse = async (e: React.FormEvent) => { 
         e.preventDefault(); 
         if (!currentCourse) return; 
         const id = currentCourse.id || Date.now().toString();
-        const courseData = { ...currentCourse, price: Number(currentCourse.price), rating: Number(currentCourse.rating), id };
-        await setDoc(doc(db, 'courses', id), courseData);
-        setIsCourseModalOpen(false); 
+        const courseData = { 
+            ...currentCourse, 
+            price: Number(currentCourse.price), 
+            rating: Number(currentCourse.rating), 
+            id 
+        };
+        
+        try {
+            await setDoc(doc(db, 'courses', id), courseData);
+            setIsCourseModalOpen(false); 
+        } catch (error) {
+            console.error("Error saving course:", error);
+            alert("Error saving course. Please check your connection.");
+        }
     };
 
     const handleSaveUser = async (e: React.FormEvent) => { 
         e.preventDefault(); 
         if(!currentUser?.id) return; 
-        await updateUserDetails(currentUser.id, currentUser); 
-        setIsUserModalOpen(false); 
+        try {
+            await updateUserDetails(currentUser.id, currentUser); 
+            setIsUserModalOpen(false); 
+        } catch (error) {
+            console.error("Error saving user:", error);
+            alert("Error updating user.");
+        }
     };
 
     const handleSaveNews = async (e: React.FormEvent) => { 
         e.preventDefault(); 
         if(!currentNews) return; 
         const id = currentNews.id || Date.now().toString();
-        await setDoc(doc(db, 'news', id), { ...currentNews, id });
-        setIsNewsModalOpen(false); 
+        try {
+            await setDoc(doc(db, 'news', id), { ...currentNews, id });
+            setIsNewsModalOpen(false); 
+        } catch (error) {
+            console.error("Error saving news:", error);
+            alert("Error saving news article.");
+        }
     };
 
     const handleSaveTestimonial = async (e: React.FormEvent) => { 
         e.preventDefault(); 
         if(!currentTestimonial) return; 
         const id = currentTestimonial.id || Date.now().toString();
-        await setDoc(doc(db, 'testimonials', id), { ...currentTestimonial, id });
-        setIsTestimonialModalOpen(false); 
+        try {
+            await setDoc(doc(db, 'testimonials', id), { ...currentTestimonial, id });
+            setIsTestimonialModalOpen(false); 
+        } catch (error) {
+            console.error("Error saving testimonial:", error);
+            alert("Error saving testimonial.");
+        }
     };
 
     const handleSaveHero = async (e: React.FormEvent) => {
         e.preventDefault();
-        await setDoc(doc(db, 'settings', 'hero'), heroContent);
-        setHeroSaveStatus('Saved!');
-        setTimeout(() => setHeroSaveStatus(''), 2000);
+        try {
+            await setDoc(doc(db, 'settings', 'hero'), heroContent);
+            setHeroSaveStatus('Saved!');
+            setTimeout(() => setHeroSaveStatus(''), 2000);
+        } catch (error) {
+            console.error("Error saving hero settings:", error);
+            setHeroSaveStatus('Error!');
+        }
     };
     
     const handleDelete = async (collectionName: string, id: string) => { 
-        if(window.confirm('Are you sure?')) await deleteDoc(doc(db, collectionName, id)); 
+        if(window.confirm('Are you sure you want to delete this item?')) {
+            try {
+                await deleteDoc(doc(db, collectionName, id));
+            } catch (error) {
+                console.error("Error deleting item:", error);
+                alert("Error deleting item.");
+            }
+        }
     };
     
     const openCourseModal = (c?: Course) => { setCurrentCourse(c || { title: '', description: '', category: '', imageUrl: '', teacher: '', duration: '', rating: 0, price: 0, content: [] }); setIsCourseModalOpen(true); };
     const openUserModal = (u: User) => { setCurrentUser(u); setIsUserModalOpen(true); };
     const openNewsModal = (n?: NewsArticle) => { setCurrentNews(n || { title: '', content: '', imageUrl: '', date: new Date().toISOString().split('T')[0] }); setIsNewsModalOpen(true); };
     const openTestimonialModal = (t?: Testimonial) => { setCurrentTestimonial(t || { author: '', role: '', quote: '', imageUrl: '' }); setIsTestimonialModalOpen(true); };
-
-
-    const heroDropzone = useDropzone({ onDrop: (f) => handleHeroImageDrop(f, 'bg'), accept: {'image/*':[]} });
-    const signInDropzone = useDropzone({ onDrop: (f) => handleHeroImageDrop(f, 'signin'), accept: {'image/*':[]} });
-    const signUpDropzone = useDropzone({ onDrop: (f) => handleHeroImageDrop(f, 'signup'), accept: {'image/*':[]} });
     
     const TabButton: React.FC<{tab: AdminTab, label: string}> = ({ tab, label }) => ( <button onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tab ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-200'}`}>{label}</button> );
 
@@ -189,8 +190,12 @@ const AdminPage: React.FC = () => {
         <div className="bg-slate-100 min-h-screen">
             <Header />
             <main className="container mx-auto p-4 sm:p-8 pt-28">
-                <h1 className="text-3xl font-bold text-slate-800 mb-6">{t('adminDashboard')}</h1>
-                {uploading && <div className="fixed top-24 right-8 bg-blue-600 text-white px-4 py-2 rounded shadow animate-pulse">Uploading Image...</div>}
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-3xl font-bold text-slate-800">{t('adminDashboard')}</h1>
+                    <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-full font-medium border border-emerald-200">
+                        Live Database Connected
+                    </span>
+                </div>
                 
                 <div className="bg-white p-4 rounded-lg shadow mb-8">
                     <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4">
@@ -212,29 +217,46 @@ const AdminPage: React.FC = () => {
                                         <h3 className="text-lg font-bold text-slate-800 mb-2">Home Page Hero</h3>
                                         <div className="mb-4"><label htmlFor="heroTitle" className="block text-sm font-medium text-slate-700">{t('title')}</label><input type="text" id="heroTitle" value={heroContent.title} onChange={e => setHeroContent(p => ({...p, title: e.target.value}))} className="mt-1 block w-full elegant-input" /></div>
                                         <div className="mb-4"><label htmlFor="heroSubtitle" className="block text-sm font-medium text-slate-700">{t('subtitle')}</label><textarea id="heroSubtitle" value={heroContent.subtitle} onChange={e => setHeroContent(p => ({...p, subtitle: e.target.value}))} rows={3} className="mt-1 block w-full elegant-input"></textarea></div>
-                                        <div><label className="block text-sm font-medium text-slate-700">{t('backgroundImage')}</label><div {...heroDropzone.getRootProps()} className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md cursor-pointer ${heroDropzone.isDragActive ? 'border-[--accent] bg-yellow-50' : ''}`}><input {...heroDropzone.getInputProps()} /><div className="space-y-1 text-center">{heroContent.backgroundImageUrl ? <img src={heroContent.backgroundImageUrl} alt="Preview" className="mx-auto h-24 w-auto"/> : <svg className="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>}<p className="text-sm text-slate-600">{t('dropImage')}</p></div></div></div>
+                                        
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium text-slate-700">{t('backgroundImage')} URL</label>
+                                            <input 
+                                                type="text" 
+                                                value={heroContent.backgroundImageUrl} 
+                                                onChange={e => setHeroContent(p => ({...p, backgroundImageUrl: e.target.value}))} 
+                                                className="mt-1 block w-full elegant-input" 
+                                                placeholder="https://example.com/background.jpg"
+                                            />
+                                            {heroContent.backgroundImageUrl && (
+                                                <div className="mt-2 relative h-32 w-full overflow-hidden rounded-md border border-slate-200">
+                                                    <img src={heroContent.backgroundImageUrl} alt="Preview" className="w-full h-full object-cover"/>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     
                                     <div className="border-t border-slate-200 my-6 pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
-                                            <h3 className="text-lg font-bold text-slate-800 mb-2">Sign In Page Image</h3>
-                                            <div {...signInDropzone.getRootProps()} className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md cursor-pointer ${signInDropzone.isDragActive ? 'border-[--accent] bg-yellow-50' : ''}`}>
-                                                <input {...signInDropzone.getInputProps()} />
-                                                <div className="space-y-1 text-center">
-                                                    {heroContent.signInImageUrl ? <img src={heroContent.signInImageUrl} alt="Sign In Preview" className="mx-auto h-24 w-auto object-cover"/> : <span className="text-slate-400">No Image</span>}
-                                                    <p className="text-xs text-slate-600">Drop Sign In Image</p>
-                                                </div>
-                                            </div>
+                                            <h3 className="text-lg font-bold text-slate-800 mb-2">Sign In Page Image URL</h3>
+                                            <input 
+                                                type="text" 
+                                                value={heroContent.signInImageUrl || ''} 
+                                                onChange={e => setHeroContent(p => ({...p, signInImageUrl: e.target.value}))} 
+                                                className="mt-1 block w-full elegant-input" 
+                                                placeholder="https://example.com/signin.jpg"
+                                            />
+                                            {heroContent.signInImageUrl && <img src={heroContent.signInImageUrl} alt="Preview" className="mt-2 h-32 w-full object-cover rounded-md"/>}
                                         </div>
                                         <div>
-                                            <h3 className="text-lg font-bold text-slate-800 mb-2">Sign Up Page Image</h3>
-                                            <div {...signUpDropzone.getRootProps()} className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md cursor-pointer ${signUpDropzone.isDragActive ? 'border-[--accent] bg-yellow-50' : ''}`}>
-                                                <input {...signUpDropzone.getInputProps()} />
-                                                <div className="space-y-1 text-center">
-                                                    {heroContent.signUpImageUrl ? <img src={heroContent.signUpImageUrl} alt="Sign Up Preview" className="mx-auto h-24 w-auto object-cover"/> : <span className="text-slate-400">No Image</span>}
-                                                    <p className="text-xs text-slate-600">Drop Sign Up Image</p>
-                                                </div>
-                                            </div>
+                                            <h3 className="text-lg font-bold text-slate-800 mb-2">Sign Up Page Image URL</h3>
+                                            <input 
+                                                type="text" 
+                                                value={heroContent.signUpImageUrl || ''} 
+                                                onChange={e => setHeroContent(p => ({...p, signUpImageUrl: e.target.value}))} 
+                                                className="mt-1 block w-full elegant-input" 
+                                                placeholder="https://example.com/signup.jpg"
+                                            />
+                                            {heroContent.signUpImageUrl && <img src={heroContent.signUpImageUrl} alt="Preview" className="mt-2 h-32 w-full object-cover rounded-md"/>}
                                         </div>
                                     </div>
 
@@ -245,19 +267,13 @@ const AdminPage: React.FC = () => {
                     </div>
                 </div>
             </main>
-            {isCourseModalOpen && currentCourse && <CourseModal course={currentCourse} onClose={() => setIsCourseModalOpen(false)} onSave={handleSaveCourse} onImageDrop={handleCourseImageDrop} setCourse={setCurrentCourse} />}
+            {isCourseModalOpen && currentCourse && <CourseModal course={currentCourse} onClose={() => setIsCourseModalOpen(false)} onSave={handleSaveCourse} setCourse={setCurrentCourse} />}
             {isUserModalOpen && currentUser && <UserModal user={currentUser} onClose={() => setIsUserModalOpen(false)} onSave={handleSaveUser} setUser={setCurrentUser} />}
-            {isNewsModalOpen && currentNews && <NewsModal article={currentNews} onClose={() => setIsNewsModalOpen(false)} onSave={handleSaveNews} onImageDrop={handleNewsImageDrop} setArticle={setCurrentNews} />}
-            {isTestimonialModalOpen && currentTestimonial && <TestimonialModal testimonial={currentTestimonial} onClose={() => setIsTestimonialModalOpen(false)} onSave={handleSaveTestimonial} onImageDrop={handleTestimonialImageDrop} setTestimonial={setCurrentTestimonial} />}
+            {isNewsModalOpen && currentNews && <NewsModal article={currentNews} onClose={() => setIsNewsModalOpen(false)} onSave={handleSaveNews} setArticle={setCurrentNews} />}
+            {isTestimonialModalOpen && currentTestimonial && <TestimonialModal testimonial={currentTestimonial} onClose={() => setIsTestimonialModalOpen(false)} onSave={handleSaveTestimonial} setTestimonial={setCurrentTestimonial} />}
         </div>
     );
 };
-
-const Dropzone: React.FC<{onDrop: (files: File[]) => void, imageUrl?: string | null}> = ({ onDrop, imageUrl }) => {
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: {'image/*': []} });
-    const { t } = useLanguage();
-    return ( <div {...getRootProps()} className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md cursor-pointer ${isDragActive ? 'border-[--accent] bg-yellow-50' : ''}`}><input {...getInputProps()} /><div className="space-y-1 text-center">{imageUrl ? <img src={imageUrl} alt="Preview" className="mx-auto h-24 w-auto object-contain"/> : <svg className="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>}<p className="text-sm text-slate-600">{t('dropImage')}</p></div></div> );
-}
 
 const ContentBlockItem: React.FC<{
   block: ContentBlock;
@@ -271,14 +287,6 @@ const ContentBlockItem: React.FC<{
     updateBlock(block.id, e.target.value);
   };
   
-  const onBlockImageDrop = async (acceptedFiles: File[]) => {
-      if(acceptedFiles.length > 0) {
-          const url = await uploadImage(acceptedFiles[0], 'content_blocks');
-          updateBlock(block.id, url);
-      }
-    };
-  const { getRootProps, getInputProps } = useDropzone({ onDrop: onBlockImageDrop, accept: {'image/*':[]} });
-
   return (
     <Draggable draggableId={block.id} index={index}>
       {(provided) => (
@@ -302,16 +310,10 @@ const ContentBlockItem: React.FC<{
             <input type="text" value={block.value} onChange={handleValueChange} className="elegant-input w-full" placeholder="Enter video URL (e.g., YouTube embed link)"/>
           )}
           {block.type === 'image' && (
-             <div {...getRootProps()} className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md cursor-pointer hover:bg-slate-100">
-                <input {...getInputProps()} />
-                <div className="space-y-1 text-center">
-                    {block.value ? 
-                        <img src={block.value} alt="Content preview" className="mx-auto h-24 w-auto object-contain"/> :
-                        <svg className="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
-                    }
-                    <p className="text-sm text-slate-600">{t('dropImage')}</p>
-                </div>
-            </div>
+             <div className="space-y-2">
+                <input type="text" value={block.value} onChange={handleValueChange} className="elegant-input w-full" placeholder="Enter image URL (https://...)"/>
+                {block.value && <img src={block.value} alt="Preview" className="h-32 object-contain rounded border border-slate-200"/>}
+             </div>
           )}
         </div>
       )}
@@ -319,10 +321,9 @@ const ContentBlockItem: React.FC<{
   );
 };
 
-const CourseModal: React.FC<{course: Partial<Course>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, onImageDrop: (f:File[])=>void, setCourse: React.Dispatch<React.SetStateAction<Partial<Course> | null>>}> = ({ course, onClose, onSave, onImageDrop, setCourse }) => {
+const CourseModal: React.FC<{course: Partial<Course>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, setCourse: React.Dispatch<React.SetStateAction<Partial<Course> | null>>}> = ({ course, onClose, onSave, setCourse }) => {
     const { t } = useLanguage();
     
-    // FIX: Parse numbers correctly for price and rating to prevent string-math crashes
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
         setCourse(prev => {
@@ -357,7 +358,13 @@ const CourseModal: React.FC<{course: Partial<Course>, onClose: ()=>void, onSave:
         setCourse(prev => prev ? ({...prev, content: items}) : null);
     };
 
-    return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800">{course.id ? t('editCourse') : t('addCourse')}</h2><form onSubmit={onSave}><div className="space-y-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('title')}</label><input name="title" value={course.title} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('description')}</label><textarea name="description" value={course.description} onChange={handleChange} className="elegant-input"/></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('category')}</label><input name="category" value={course.category} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('teacher')}</label><input name="teacher" value={course.teacher} onChange={handleChange} className="elegant-input"/></div></div><div className="grid grid-cols-3 gap-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('duration')}</label><input name="duration" value={course.duration} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('rating')}</label><input name="rating" type="number" step="0.1" value={course.rating} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('price')}</label><input name="price" type="number" value={course.price} onChange={handleChange} className="elegant-input"/></div></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('imageUrl')}</label><Dropzone onDrop={onImageDrop} imageUrl={course.imageUrl} /></div></div>
+    return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800">{course.id ? t('editCourse') : t('addCourse')}</h2><form onSubmit={onSave}><div className="space-y-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('title')}</label><input name="title" value={course.title} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('description')}</label><textarea name="description" value={course.description} onChange={handleChange} className="elegant-input"/></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('category')}</label><input name="category" value={course.category} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('teacher')}</label><input name="teacher" value={course.teacher} onChange={handleChange} className="elegant-input"/></div></div><div className="grid grid-cols-3 gap-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('duration')}</label><input name="duration" value={course.duration} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('rating')}</label><input name="rating" type="number" step="0.1" value={course.rating} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('price')}</label><input name="price" type="number" value={course.price} onChange={handleChange} className="elegant-input"/></div></div>
+    <div>
+        <label className="block text-sm font-semibold text-slate-700 mb-1">{t('imageUrl')}</label>
+        <input name="imageUrl" value={course.imageUrl} onChange={handleChange} className="elegant-input" placeholder="https://..."/>
+        {course.imageUrl && <img src={course.imageUrl} alt="Preview" className="mt-2 h-20 object-cover rounded"/>}
+    </div>
+    </div>
     
     <div className="mt-6 pt-4 border-t border-slate-200"><h3 className="text-lg font-medium text-slate-800 mb-2">{t('contentBlocks')}</h3>
     {/* Use StrictModeDroppable instead of Droppable */}
@@ -370,15 +377,27 @@ const UserModal: React.FC<{user: Partial<User>, onClose: ()=>void, onSave: (e: R
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setUser((prev: User) => ({...prev, [e.target.name]: e.target.value}));
     return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-md"><h2 className="text-2xl font-bold mb-6 text-slate-800">{t('editUser')}</h2><form onSubmit={onSave} className="space-y-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('username')}</label><input name="username" value={user.username} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('email')}</label><input value={user.email} className="elegant-input bg-slate-200" readOnly/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('role')}</label><select name="role" value={user.role} onChange={handleChange} className="elegant-input"><option value={UserRole.USER}>USER</option><option value={UserRole.ADMIN}>ADMIN</option></select></div><div className="flex justify-end space-x-4 pt-4"><button type="button" onClick={onClose} className="elegant-button-outline">{t('cancel')}</button><button type="submit" className="elegant-button">{t('save')}</button></div></form></div></div>)
 }
-const NewsModal: React.FC<{article: Partial<NewsArticle>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, onImageDrop: (f:File[])=>void, setArticle: (a: any)=>void}> = ({ article, onClose, onSave, onImageDrop, setArticle }) => {
+const NewsModal: React.FC<{article: Partial<NewsArticle>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, setArticle: (a: any)=>void}> = ({ article, onClose, onSave, setArticle }) => {
     const { t } = useLanguage();
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setArticle((prev: NewsArticle) => ({...prev, [e.target.name]: e.target.value}));
-    return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800">{article.id ? t('editNews') : t('addNews')}</h2><form onSubmit={onSave} className="space-y-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('title')}</label><input name="title" value={article.title} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('content')}</label><textarea name="content" value={article.content} onChange={handleChange} rows={5} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('date')}</label><input name="date" type="date" value={article.date} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('imageUrl')}</label><Dropzone onDrop={onImageDrop} imageUrl={article.imageUrl} /></div><div className="flex justify-end space-x-4 pt-4"><button type="button" onClick={onClose} className="elegant-button-outline">{t('cancel')}</button><button type="submit" className="elegant-button">{t('save')}</button></div></form></div></div>)
+    return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800">{article.id ? t('editNews') : t('addNews')}</h2><form onSubmit={onSave} className="space-y-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('title')}</label><input name="title" value={article.title} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('content')}</label><textarea name="content" value={article.content} onChange={handleChange} rows={5} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('date')}</label><input name="date" type="date" value={article.date} onChange={handleChange} className="elegant-input"/></div>
+    <div>
+        <label className="block text-sm font-semibold text-slate-700 mb-1">{t('imageUrl')}</label>
+        <input name="imageUrl" value={article.imageUrl} onChange={handleChange} className="elegant-input" placeholder="https://..."/>
+        {article.imageUrl && <img src={article.imageUrl} alt="Preview" className="mt-2 h-20 object-cover rounded"/>}
+    </div>
+    <div className="flex justify-end space-x-4 pt-4"><button type="button" onClick={onClose} className="elegant-button-outline">{t('cancel')}</button><button type="submit" className="elegant-button">{t('save')}</button></div></form></div></div>)
 }
-const TestimonialModal: React.FC<{testimonial: Partial<Testimonial>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, onImageDrop: (f:File[])=>void, setTestimonial: (t: any)=>void}> = ({ testimonial, onClose, onSave, onImageDrop, setTestimonial }) => {
+const TestimonialModal: React.FC<{testimonial: Partial<Testimonial>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, setTestimonial: (t: any)=>void}> = ({ testimonial, onClose, onSave, setTestimonial }) => {
     const { t } = useLanguage();
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setTestimonial((prev: Testimonial) => ({...prev, [e.target.name]: e.target.value}));
-    return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800">{testimonial.id ? t('editTestimonial') : t('addTestimonial')}</h2><form onSubmit={onSave} className="space-y-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('author')}</label><input name="author" value={testimonial.author} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('role')}</label><input name="role" value={testimonial.role} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('quote')}</label><textarea name="quote" value={testimonial.quote} onChange={handleChange} rows={4} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('imageUrl')}</label><Dropzone onDrop={onImageDrop} imageUrl={testimonial.imageUrl} /></div><div className="flex justify-end space-x-4 pt-4"><button type="button" onClick={onClose} className="elegant-button-outline">{t('cancel')}</button><button type="submit" className="elegant-button">{t('save')}</button></div></form></div></div>)
+    return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800">{testimonial.id ? t('editTestimonial') : t('addTestimonial')}</h2><form onSubmit={onSave} className="space-y-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('author')}</label><input name="author" value={testimonial.author} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('role')}</label><input name="role" value={testimonial.role} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('quote')}</label><textarea name="quote" value={testimonial.quote} onChange={handleChange} rows={4} className="elegant-input"/></div>
+    <div>
+        <label className="block text-sm font-semibold text-slate-700 mb-1">{t('imageUrl')}</label>
+        <input name="imageUrl" value={testimonial.imageUrl} onChange={handleChange} className="elegant-input" placeholder="https://..."/>
+        {testimonial.imageUrl && <img src={testimonial.imageUrl} alt="Preview" className="mt-2 h-20 object-cover rounded"/>}
+    </div>
+    <div className="flex justify-end space-x-4 pt-4"><button type="button" onClick={onClose} className="elegant-button-outline">{t('cancel')}</button><button type="submit" className="elegant-button">{t('save')}</button></div></form></div></div>)
 }
 
 

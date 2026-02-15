@@ -11,6 +11,7 @@ const SignInPage: React.FC = () => {
     const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
+    const [isLoading, setIsLoading] = React.useState(false);
     const { signIn, isAuthenticated, isAdmin } = useAuth();
     const { t } = useLanguage();
     const navigate = useNavigate();
@@ -29,16 +30,27 @@ const SignInPage: React.FC = () => {
         }
     }, [isAuthenticated, isAdmin, navigate]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const success = signIn(email, password);
-        if (!success) {
-            setError('Invalid email or password');
+        setError('');
+        setIsLoading(true);
+        
+        const result = await signIn(email, password);
+        
+        if (!result.success) {
+            setError(result.message || 'Invalid email or password');
+            setIsLoading(false);
         }
+        // If success, the useEffect above will redirect
     };
     
-    const handleGoogleSignIn = () => {
-        signIn('user@google.com', undefined, true);
+    const handleGoogleSignIn = async () => {
+        setIsLoading(true);
+        const result = await signIn('user@google.com', undefined, true);
+        if(!result.success) {
+            setError(result.message || 'Google Sign In failed');
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -83,11 +95,15 @@ const SignInPage: React.FC = () => {
                                 </div>
                             </div>
                             
-                            {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>}
+                            {error && (
+                                <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md border border-red-200">
+                                    {error}
+                                </div>
+                            )}
 
                             <div>
-                                <button type="submit" className="w-full elegant-button">
-                                    {t('signIn')}
+                                <button type="submit" disabled={isLoading} className="w-full elegant-button disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {isLoading ? 'Signing In...' : t('signIn')}
                                 </button>
                             </div>
                         </form>
@@ -98,13 +114,12 @@ const SignInPage: React.FC = () => {
                                     <div className="w-full border-t border-slate-300 dark:border-slate-600" />
                                 </div>
                                 <div className="relative flex justify-center text-sm">
-                                    {/* FIX: Ensure background matches card background exactly and verify z-index */}
                                     <span className="px-4 bg-[var(--bg-primary)] text-[var(--text-secondary)] font-medium z-10">Or continue with</span>
                                 </div>
                             </div>
 
                             <div className="mt-6">
-                                <button onClick={handleGoogleSignIn} className="w-full inline-flex justify-center py-2 px-4 border border-[var(--border-color)] rounded-md shadow-sm bg-[var(--bg-primary)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors">
+                                <button onClick={handleGoogleSignIn} disabled={isLoading} className="w-full inline-flex justify-center py-2 px-4 border border-[var(--border-color)] rounded-md shadow-sm bg-[var(--bg-primary)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors">
                                     <GoogleIcon />
                                     <span>{t('signInWithGoogle')}</span>
                                 </button>

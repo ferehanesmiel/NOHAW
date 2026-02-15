@@ -47,6 +47,9 @@ const Header: React.FC = () => {
                                 <NavLink to="/dashboard" className={navLinkClass}>{t('dashboard')}</NavLink>
                                 <NavLink to="/about-us" className={navLinkClass}>{t('aboutUs')}</NavLink>
                                 <NavLink to="/support" className={navLinkClass}>{t('support')}</NavLink>
+                                {isAdmin && (
+                                    <NavLink to="/admin" className={navLinkClass}>Admin</NavLink>
+                                )}
                             </nav>
                         )}
                     </div>
@@ -56,7 +59,10 @@ const Header: React.FC = () => {
                         {isAuthenticated && user ? (
                             <div className="relative" ref={dropdownRef}>
                                 <button onClick={() => setDropdownOpen(!dropdownOpen)} className="flex items-center space-x-2">
-                                    <span className="font-semibold text-slate-700 hidden sm:inline">{user.username}</span>
+                                    <div className="flex flex-col items-end">
+                                        <span className="font-semibold text-slate-700 hidden sm:inline text-sm">{user.username}</span>
+                                        {isAdmin && <span className="text-[10px] text-[--accent] font-bold uppercase tracking-wider hidden sm:inline">(Admin)</span>}
+                                    </div>
                                      {user.profilePictureUrl ? (
                                         <img src={user.profilePictureUrl} alt={user.username} className="w-9 h-9 rounded-full object-cover border-2 border-slate-300" />
                                      ) : (
@@ -67,7 +73,7 @@ const Header: React.FC = () => {
                                 </button>
                                 {dropdownOpen && (
                                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-slate-200">
-                                        {isAdmin && <Link to="/admin" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">{t('adminDashboard')}</Link>}
+                                        {isAdmin && <Link to="/admin" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-[--accent] font-semibold hover:bg-slate-100">{t('adminDashboard')}</Link>}
                                         {!isAdmin && <Link to="/dashboard" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">{t('dashboard')}</Link>}
                                         <Link to="/profile" onClick={() => setDropdownOpen(false)} className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">{t('profile')}</Link>
                                         <button onClick={handleSignOut} className="w-full text-left block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">{t('signOut')}</button>
