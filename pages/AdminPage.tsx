@@ -1,7 +1,8 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Course, User, UserRole, HeroContent, NewsArticle, Testimonial } from '../types';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { Course, User, UserRole, HeroContent, NewsArticle, Testimonial, ContentBlock } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useCourse } from '../contexts/CourseContext';
@@ -36,12 +37,12 @@ const AdminPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<AdminTab>('courses');
     const [heroSaveStatus, setHeroSaveStatus] = useState('');
 
-    const handleImageDrop = (setter: (updater: (prevState: any) => any) => void) => useCallback((acceptedFiles: File[]) => {
+    const handleImageDrop = (setter: React.Dispatch<React.SetStateAction<any>>) => useCallback((acceptedFiles: File[]) => {
       const file = acceptedFiles[0];
       const reader = new FileReader();
       reader.onload = (event) => {
         if(event.target && typeof event.target.result === 'string') {
-          setter(prev => ({...prev, imageUrl: event.target.result}));
+          setter((prev: any) => ({...prev, imageUrl: event.target.result}));
         }
       };
       reader.readAsDataURL(file);
@@ -56,7 +57,7 @@ const AdminPage: React.FC = () => {
     }, [heroSaveStatus]);
 
     // Modal openers
-    const openCourseModal = (c?: Course) => { setCurrentCourse(c || { title: '', description: '', category: '', imageUrl: '', teacher: '', duration: '', rating: 0, price: 0 }); setIsCourseModalOpen(true); };
+    const openCourseModal = (c?: Course) => { setCurrentCourse(c || { title: '', description: '', category: '', imageUrl: '', teacher: '', duration: '', rating: 0, price: 0, content: [] }); setIsCourseModalOpen(true); };
     const openUserModal = (u: User) => { setCurrentUser(u); setIsUserModalOpen(true); };
     const openNewsModal = (n?: NewsArticle) => { setCurrentNews(n || { title: '', content: '', imageUrl: '', date: new Date().toISOString().split('T')[0] }); setIsNewsModalOpen(true); };
     const openTestimonialModal = (t?: Testimonial) => { setCurrentTestimonial(t || { author: '', role: '', quote: '', imageUrl: '' }); setIsTestimonialModalOpen(true); };
@@ -119,10 +120,102 @@ const Dropzone: React.FC<{onDrop: (files: File[]) => void, imageUrl?: string | n
     return ( <div {...getRootProps()} className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md cursor-pointer ${isDragActive ? 'border-[--accent] bg-yellow-50' : ''}`}><input {...getInputProps()} /><div className="space-y-1 text-center">{imageUrl ? <img src={imageUrl} alt="Preview" className="mx-auto h-24 w-auto object-contain"/> : <svg className="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>}<p className="text-sm text-slate-600">{t('dropImage')}</p></div></div> );
 }
 
-const CourseModal: React.FC<{course: Partial<Course>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, onImageDrop: (f:File[])=>void, setCourse: (c: any)=>void}> = ({ course, onClose, onSave, onImageDrop, setCourse }) => {
+const ContentBlockItem: React.FC<{
+  block: ContentBlock;
+  index: number;
+  updateBlock: (id: string, value: string) => void;
+  deleteBlock: (id: string) => void;
+}> = ({ block, index, updateBlock, deleteBlock }) => {
+  const { t } = useLanguage();
+
+  const handleValueChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    updateBlock(block.id, e.target.value);
+  };
+  
+  const onBlockImageDrop = useCallback((acceptedFiles: File[]) => {
+      const file = acceptedFiles[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if(event.target && typeof event.target.result === 'string') {
+          updateBlock(block.id, event.target.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }, [block.id, updateBlock]);
+  const { getRootProps, getInputProps } = useDropzone({ onDrop: onBlockImageDrop, accept: {'image/*':[]} });
+
+  return (
+    <Draggable draggableId={block.id} index={index}>
+      {(provided) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          className="p-4 mb-2 bg-slate-50 rounded-lg border border-slate-200"
+        >
+          <div className="flex items-center justify-between mb-2">
+             <div className="flex items-center">
+                <span {...provided.dragHandleProps} className="cursor-grab text-slate-400 mr-2">☰</span>
+                <span className="font-medium text-slate-700 capitalize">{block.type} Block</span>
+             </div>
+            <button type="button" onClick={() => deleteBlock(block.id)} className="text-red-500 hover:text-red-700 text-sm">{t('delete')}</button>
+          </div>
+
+          {block.type === 'text' && (
+            <textarea value={block.value} onChange={handleValueChange} rows={4} className="elegant-input w-full" placeholder="Enter text content..."/>
+          )}
+          {block.type === 'video' && (
+            <input type="text" value={block.value} onChange={handleValueChange} className="elegant-input w-full" placeholder="Enter video URL (e.g., YouTube embed link)"/>
+          )}
+          {block.type === 'image' && (
+             <div {...getRootProps()} className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md cursor-pointer hover:bg-slate-100">
+                <input {...getInputProps()} />
+                <div className="space-y-1 text-center">
+                    {block.value ? 
+                        <img src={block.value} alt="Content preview" className="mx-auto h-24 w-auto object-contain"/> :
+                        <svg className="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
+                    }
+                    <p className="text-sm text-slate-600">{t('dropImage')}</p>
+                </div>
+            </div>
+          )}
+        </div>
+      )}
+    </Draggable>
+  );
+};
+
+const CourseModal: React.FC<{course: Partial<Course>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, onImageDrop: (f:File[])=>void, setCourse: React.Dispatch<React.SetStateAction<Partial<Course> | null>>}> = ({ course, onClose, onSave, onImageDrop, setCourse }) => {
     const { t } = useLanguage();
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setCourse((prev: Course) => ({...prev, [e.target.name]: e.target.value}));
-    return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800">{course.id ? t('editCourse') : t('addCourse')}</h2><form onSubmit={onSave} className="space-y-4"><div><label>{t('title')}</label><input name="title" value={course.title} onChange={handleChange} className="elegant-input"/></div><div><label>{t('description')}</label><textarea name="description" value={course.description} onChange={handleChange} className="elegant-input"/></div><div className="grid grid-cols-2 gap-4"><div><label>{t('category')}</label><input name="category" value={course.category} onChange={handleChange} className="elegant-input"/></div><div><label>{t('teacher')}</label><input name="teacher" value={course.teacher} onChange={handleChange} className="elegant-input"/></div></div><div className="grid grid-cols-3 gap-4"><div><label>{t('duration')}</label><input name="duration" value={course.duration} onChange={handleChange} className="elegant-input"/></div><div><label>{t('rating')}</label><input name="rating" type="number" step="0.1" value={course.rating} onChange={handleChange} className="elegant-input"/></div><div><label>{t('price')}</label><input name="price" type="number" value={course.price} onChange={handleChange} className="elegant-input"/></div></div><div><label>{t('imageUrl')}</label><Dropzone onDrop={onImageDrop} imageUrl={course.imageUrl} /></div><div className="flex justify-end space-x-4 pt-4"><button type="button" onClick={onClose} className="elegant-button-outline">{t('cancel')}</button><button type="submit" className="elegant-button">{t('save')}</button></div></form></div></div>)
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setCourse(prev => prev ? ({...prev, [e.target.name]: e.target.value}) : null);
+    
+    const contentBlocks = course.content || [];
+
+    const addBlock = (type: 'text' | 'image' | 'video') => {
+        const newBlock: ContentBlock = { id: `block-${Date.now()}`, type, value: '' };
+        setCourse(prev => prev ? ({ ...prev, content: [...(prev.content || []), newBlock] }) : null);
+    };
+
+    const updateBlock = (id: string, value: string) => {
+        setCourse(prev => prev ? ({ ...prev, content: (prev.content || []).map(b => b.id === id ? { ...b, value } : b) }) : null);
+    };
+
+    const deleteBlock = (id: string) => {
+        setCourse(prev => prev ? ({ ...prev, content: (prev.content || []).filter(b => b.id !== id) }) : null);
+    };
+
+    const onDragEnd = (result: DropResult) => {
+        if (!result.destination) return;
+        const items = Array.from(contentBlocks);
+        const [reorderedItem] = items.splice(result.source.index, 1);
+        items.splice(result.destination.index, 0, reorderedItem);
+        setCourse(prev => prev ? ({...prev, content: items}) : null);
+    };
+
+    return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800">{course.id ? t('editCourse') : t('addCourse')}</h2><form onSubmit={onSave}><div className="space-y-4"><div><label>{t('title')}</label><input name="title" value={course.title} onChange={handleChange} className="elegant-input"/></div><div><label>{t('description')}</label><textarea name="description" value={course.description} onChange={handleChange} className="elegant-input"/></div><div className="grid grid-cols-2 gap-4"><div><label>{t('category')}</label><input name="category" value={course.category} onChange={handleChange} className="elegant-input"/></div><div><label>{t('teacher')}</label><input name="teacher" value={course.teacher} onChange={handleChange} className="elegant-input"/></div></div><div className="grid grid-cols-3 gap-4"><div><label>{t('duration')}</label><input name="duration" value={course.duration} onChange={handleChange} className="elegant-input"/></div><div><label>{t('rating')}</label><input name="rating" type="number" step="0.1" value={course.rating} onChange={handleChange} className="elegant-input"/></div><div><label>{t('price')}</label><input name="price" type="number" value={course.price} onChange={handleChange} className="elegant-input"/></div></div><div><label>{t('imageUrl')}</label><Dropzone onDrop={onImageDrop} imageUrl={course.imageUrl} /></div></div>
+    
+    <div className="mt-6 pt-4 border-t border-slate-200"><h3 className="text-lg font-medium text-slate-800 mb-2">{t('contentBlocks')}</h3><DragDropContext onDragEnd={onDragEnd}><Droppable droppableId="content-blocks">{(provided) => (<div {...provided.droppableProps} ref={provided.innerRef}>{contentBlocks.length > 0 ? contentBlocks.map((block, index) => (<ContentBlockItem key={block.id} block={block} index={index} updateBlock={updateBlock} deleteBlock={deleteBlock} />)) : <p className="text-sm text-slate-500 text-center py-4">No content yet. Add a block to get started.</p>}{provided.placeholder}</div>)}</Droppable></DragDropContext><div className="flex items-center space-x-2 mt-4"><button type="button" onClick={() => addBlock('text')} className="elegant-button-outline text-sm">{t('addTextBlock')}</button><button type="button" onClick={() => addBlock('image')} className="elegant-button-outline text-sm">{t('addImageBlock')}</button><button type="button" onClick={() => addBlock('video')} className="elegant-button-outline text-sm">{t('addVideoBlock')}</button></div></div>
+
+    <div className="flex justify-end space-x-4 pt-6"><button type="button" onClick={onClose} className="elegant-button-outline">{t('cancel')}</button><button type="submit" className="elegant-button">{t('save')}</button></div></form></div></div>)
 }
 const UserModal: React.FC<{user: Partial<User>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, setUser: (u: any)=>void}> = ({ user, onClose, onSave, setUser }) => {
     const { t } = useLanguage();

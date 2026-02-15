@@ -3,10 +3,13 @@ import React from 'react';
 
 export const LogoIcon = () => (
     <div className="flex items-center space-x-2">
-        <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center font-bold text-white text-xl">
+        <div 
+            className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xl"
+            style={{ backgroundColor: 'var(--accent)', color: 'var(--btn-text)' }}
+        >
             N
         </div>
-        <span className="font-bold text-2xl text-slate-800">NOHAW</span>
+        <span className="font-bold text-2xl text-[var(--text-primary)]">NOHAW</span>
     </div>
 );
 

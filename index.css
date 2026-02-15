@@ -21,7 +21,7 @@
 }
 
 .elegant-button-outline {
-    background-color: transparent;
+    background-color: var(--btn-outline-bg);
     color: var(--accent);
     border: 1px solid var(--accent);
     transition: all 0.3s ease;

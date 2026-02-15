@@ -31,7 +31,7 @@ const Header: React.FC = () => {
     }, []);
     
     const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-        `text-base font-medium transition-colors pb-1 ${isActive ? 'text-[--accent] font-semibold border-b-2 border-[--accent]' : 'text-var(--text-secondary) hover:text-var(--text-primary)'}`;
+        `text-base font-medium transition-colors pb-1 ${isActive ? 'text-[--accent] font-semibold border-b-2 border-[--accent]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`;
 
     return (
         <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-gray-800">
