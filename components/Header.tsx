@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import LanguageSwitcher from './LanguageSwitcher';
+import ThemeSwitcher from './ThemeSwitcher';
 import { LogoIcon } from './icons';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -30,10 +31,10 @@ const Header: React.FC = () => {
     }, []);
     
     const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-        `text-base font-medium transition-colors pb-1 ${isActive ? 'text-[--accent] font-semibold border-b-2 border-[--accent]' : 'text-slate-600 hover:text-slate-900'}`;
+        `text-base font-medium transition-colors pb-1 ${isActive ? 'text-[--accent] font-semibold border-b-2 border-[--accent]' : 'text-var(--text-secondary) hover:text-var(--text-primary)'}`;
 
     return (
-        <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-b border-slate-200">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-gray-800">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-20">
                     <div className="flex items-center">
@@ -50,6 +51,7 @@ const Header: React.FC = () => {
                         )}
                     </div>
                     <div className="flex items-center space-x-4">
+                        <ThemeSwitcher />
                         <LanguageSwitcher />
                         {isAuthenticated && user ? (
                             <div className="relative" ref={dropdownRef}>

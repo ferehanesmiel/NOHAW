@@ -14,6 +14,7 @@ import SupportPage from './pages/SupportPage';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { CourseProvider } from './contexts/CourseContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { UserRole } from './types';
 
@@ -22,8 +23,8 @@ function App() {
     <LanguageProvider>
       <AuthProvider>
         <CourseProvider>
-          <HashRouter>
-            <div className="bg-slate-50 min-h-screen">
+          <ThemeProvider>
+            <HashRouter>
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/courses" element={<CoursesPage />} />
@@ -65,8 +66,8 @@ function App() {
                   }
                 />
               </Routes>
-            </div>
-          </HashRouter>
+            </HashRouter>
+          </ThemeProvider>
         </CourseProvider>
       </AuthProvider>
     </LanguageProvider>
