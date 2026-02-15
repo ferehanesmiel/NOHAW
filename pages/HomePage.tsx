@@ -1,14 +1,16 @@
 
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import CourseCard from '../components/CourseCard';
+import PaymentModal from '../components/PaymentModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Course, HeroContent, NewsArticle, Testimonial } from '../types';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../contexts/AuthContext';
+import { useCourse } from '../contexts/CourseContext';
 
 const mockCourses: Course[] = [
     { id: '1', title: 'Modern Web Development', description: 'Build dynamic, responsive websites with the latest frameworks and technologies.', category: 'Development', imageUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60', teacher: 'Alex Doe', duration: '12 Hours', rating: 4.8, price: 50 },
@@ -49,6 +51,9 @@ const TestimonialCard: React.FC<{testimonial: Testimonial}> = ({ testimonial }) 
 const HomePage: React.FC = () => {
     const { t } = useLanguage();
     const { isAuthenticated } = useAuth();
+    const { enroll } = useCourse();
+    const navigate = useNavigate();
+
     const [courses] = useLocalStorage<Course[]>('courses', mockCourses);
     const [news] = useLocalStorage<NewsArticle[]>('news', mockNews);
     const [testimonials] = useLocalStorage<Testimonial[]>('testimonials', mockTestimonials);
@@ -57,6 +62,31 @@ const HomePage: React.FC = () => {
       subtitle: 'Discover curated courses in technology and design, crafted to elevate your skills and professional life.',
       backgroundImageUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80',
     });
+
+    const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+    const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+
+    const handleEnrollClick = (course: Course) => {
+        if (!isAuthenticated) {
+            navigate('/signin');
+            return;
+        }
+        if (course.price > 0) {
+            setSelectedCourse(course);
+            setPaymentModalOpen(true);
+        } else {
+            enroll(course.id);
+            navigate(`/courses/${course.id}`);
+        }
+    };
+    
+    const handlePaymentSuccess = () => {
+        if (selectedCourse) {
+            enroll(selectedCourse.id);
+            setPaymentModalOpen(false);
+            navigate(`/courses/${selectedCourse.id}`);
+        }
+    };
 
     return (
         <div className="bg-[--bg-primary]">
@@ -77,7 +107,7 @@ const HomePage: React.FC = () => {
                 <div className="py-24 bg-white">
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center"><h2 className="text-4xl font-bold text-slate-800 tracking-tight">{t('featuredCourses')}</h2></div>
-                        <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3">{courses.slice(0,3).map((course) => (<CourseCard key={course.id} course={course} />))}</div>
+                        <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3">{courses.slice(0,3).map((course) => (<CourseCard key={course.id} course={course} onEnrollClick={handleEnrollClick} />))}</div>
                     </div>
                 </div>
 
@@ -100,6 +130,13 @@ const HomePage: React.FC = () => {
             <div className="pb-16 md:pb-0"></div>
             <Footer />
             <BottomNav />
+            {isPaymentModalOpen && selectedCourse && (
+                <PaymentModal
+                    course={selectedCourse}
+                    onClose={() => setPaymentModalOpen(false)}
+                    onPaymentSuccess={handlePaymentSuccess}
+                />
+            )}
         </div>
     );
 };

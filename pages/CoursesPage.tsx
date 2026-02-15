@@ -1,16 +1,46 @@
 
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import CourseCard from '../components/CourseCard';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import PaymentModal from '../components/PaymentModal';
+import { useCourse } from '../contexts/CourseContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Course } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import BottomNav from '../components/BottomNav';
 
 const CoursesPage: React.FC = () => {
     const { t } = useLanguage();
-    const [courses] = useLocalStorage<Course[]>('courses', []);
+    const { courses, enroll } = useCourse();
+    const { isAuthenticated } = useAuth();
+    const navigate = useNavigate();
+
+    const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+    const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+
+    const handleEnrollClick = (course: Course) => {
+        if (!isAuthenticated) {
+            navigate('/signin');
+            return;
+        }
+        if (course.price > 0) {
+            setSelectedCourse(course);
+            setPaymentModalOpen(true);
+        } else {
+            enroll(course.id);
+            navigate(`/courses/${course.id}`);
+        }
+    };
+    
+    const handlePaymentSuccess = () => {
+        if (selectedCourse) {
+            enroll(selectedCourse.id);
+            setPaymentModalOpen(false);
+            navigate(`/courses/${selectedCourse.id}`);
+        }
+    };
 
     return (
         <div className="bg-white min-h-screen flex flex-col">
@@ -24,7 +54,7 @@ const CoursesPage: React.FC = () => {
                         {courses.length > 0 ? (
                             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
                                 {courses.map((course) => (
-                                    <CourseCard key={course.id} course={course} />
+                                    <CourseCard key={course.id} course={course} onEnrollClick={handleEnrollClick} />
                                 ))}
                             </div>
                         ) : (
@@ -36,6 +66,13 @@ const CoursesPage: React.FC = () => {
             <div className="pb-16 md:pb-0"></div> {/* Spacer for bottom nav */}
             <Footer />
             <BottomNav />
+            {isPaymentModalOpen && selectedCourse && (
+                <PaymentModal
+                    course={selectedCourse}
+                    onClose={() => setPaymentModalOpen(false)}
+                    onPaymentSuccess={handlePaymentSuccess}
+                />
+            )}
         </div>
     );
 };
