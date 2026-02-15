@@ -55,9 +55,13 @@ const Header: React.FC = () => {
                             <div className="relative" ref={dropdownRef}>
                                 <button onClick={() => setDropdownOpen(!dropdownOpen)} className="flex items-center space-x-2">
                                     <span className="font-semibold text-slate-700 hidden sm:inline">{user.username}</span>
-                                     <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center text-[--accent] font-bold border-2 border-slate-300">
-                                        {user.username.charAt(0).toUpperCase()}
-                                    </div>
+                                     {user.profilePictureUrl ? (
+                                        <img src={user.profilePictureUrl} alt={user.username} className="w-9 h-9 rounded-full object-cover border-2 border-slate-300" />
+                                     ) : (
+                                        <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center text-[--accent] font-bold border-2 border-slate-300">
+                                            {user.username.charAt(0).toUpperCase()}
+                                        </div>
+                                     )}
                                 </button>
                                 {dropdownOpen && (
                                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-slate-200">

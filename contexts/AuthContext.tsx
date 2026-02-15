@@ -11,7 +11,7 @@ type AuthContextType = {
   signOut: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  updateUser: (username: string) => void;
+  updateProfile: (details: Partial<Pick<User, 'username' | 'bio' | 'profilePictureUrl'>>) => void;
   updateUserDetails: (userId: string, details: Partial<User>) => void;
   deleteUser: (userId: string) => void;
   changePassword: (currentPassword: string, newPassword: string) => boolean;
@@ -25,7 +25,7 @@ const ADMIN_PASS = 'esmielferehan@123';
 export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [user, setUser] = useLocalStorage<User | null>('user', null);
   const [users, setUsers] = useLocalStorage<User[]>('users_db', [
-    { id: '1', email: ADMIN_EMAIL, password: ADMIN_PASS, username: 'Admin User', role: UserRole.ADMIN }
+    { id: '1', email: ADMIN_EMAIL, password: ADMIN_PASS, username: 'Admin User', role: UserRole.ADMIN, bio: '', profilePictureUrl: '' }
   ]);
 
   const signIn = (email: string, password?: string, isGoogleSignIn = false): boolean => {
@@ -66,9 +66,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     return true;
   };
   
-  const updateUser = (username: string) => {
+  const updateProfile = (details: Partial<Pick<User, 'username' | 'bio' | 'profilePictureUrl'>>) => {
     if (user) {
-      const updatedUser = { ...user, username };
+      const updatedUser = { ...user, ...details };
       setUser(updatedUser);
       setUsers(currentUsers => currentUsers.map(u => u.id === user.id ? updatedUser : u));
     }
@@ -106,7 +106,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const isAdmin = user?.role === UserRole.ADMIN;
 
   return (
-    <AuthContext.Provider value={{ user, users, signIn, signUp, signOut, isAuthenticated, isAdmin, updateUser, updateUserDetails, deleteUser, changePassword }}>
+    <AuthContext.Provider value={{ user, users, signIn, signUp, signOut, isAuthenticated, isAdmin, updateProfile, updateUserDetails, deleteUser, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

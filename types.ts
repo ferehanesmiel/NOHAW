@@ -30,6 +30,8 @@ export interface User {
   email: string;
   role: UserRole;
   password?: string;
+  profilePictureUrl?: string;
+  bio?: string;
 }
 
 export type ContentBlock = {
