@@ -2,14 +2,19 @@
 import * as React from 'react';
 
 export const LogoIcon = () => (
-    <div className="flex items-center space-x-2">
-        <div 
-            className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xl"
-            style={{ backgroundColor: 'var(--accent)', color: 'var(--btn-text)' }}
-        >
-            N
+    <div className="flex items-center gap-3">
+        <div className="relative flex items-center justify-center w-8 h-8">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-[--accent]">
+                <path d="M12 2L21 7V17L12 22L3 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 22V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 12L21 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 12L3 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="12" cy="12" r="2" fill="currentColor" />
+            </svg>
         </div>
-        <span className="font-bold text-2xl text-[var(--text-primary)]">NOHAW</span>
+        <span className="font-extrabold text-2xl tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-[--accent] to-indigo-500">
+            NOHAW
+        </span>
     </div>
 );
 
