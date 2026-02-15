@@ -4,8 +4,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { LogoIcon, GoogleIcon } from '../components/icons';
-import { useLocalStorage } from '../hooks/useLocalStorage';
 import { HeroContent } from '../types';
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 const SignUpPage: React.FC = () => {
     const [username, setUsername] = React.useState('');
@@ -17,19 +18,30 @@ const SignUpPage: React.FC = () => {
     const { t } = useLanguage();
     const navigate = useNavigate();
     
-    // Retrieve dynamic images from local storage (managed in Admin)
-    const [heroContent] = useLocalStorage<HeroContent>('heroContent', {
-      title: 'Design Your Future.',
-      subtitle: 'Discover curated courses.',
-      backgroundImageUrl: '',
-      signUpImageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60'
-    });
+    // Dynamic Image State
+    const [signUpImageUrl, setSignUpImageUrl] = React.useState('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60');
 
     React.useEffect(() => {
         if (isAuthenticated) {
             navigate(isAdmin ? '/admin' : '/dashboard');
         }
     }, [isAuthenticated, isAdmin, navigate]);
+
+    // Fetch Admin Settings for Image
+    React.useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const docSnap = await getDoc(doc(db, 'settings', 'hero'));
+                if(docSnap.exists()) {
+                    const data = docSnap.data() as HeroContent;
+                    if(data.signUpImageUrl) setSignUpImageUrl(data.signUpImageUrl);
+                }
+            } catch (err) {
+                console.error("Failed to load page settings", err);
+            }
+        };
+        fetchSettings();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -121,12 +133,12 @@ const SignUpPage: React.FC = () => {
                     </div>
                 </div>
             </div>
-             {/* Image Section - Agenda 2063 Art Style / Dynamic */}
+             {/* Image Section - Dynamic */}
              <div className="hidden lg:block relative w-0 flex-1 bg-white overflow-hidden">
                 <img 
                     className="absolute inset-0 h-full w-full object-cover pencil-art" 
-                    src={heroContent.signUpImageUrl || 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60'} 
-                    alt="African Innovation and Future Art" 
+                    src={signUpImageUrl} 
+                    alt="Sign Up Background" 
                 />
                 <div className="absolute inset-0 bg-orange-900/10 mix-blend-multiply"></div>
                 <div className="absolute top-10 right-10 text-slate-800 bg-white/80 backdrop-blur-sm p-4 rounded-lg max-w-md shadow-lg border border-slate-200 text-right">

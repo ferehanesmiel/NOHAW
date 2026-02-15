@@ -8,7 +8,8 @@ import { useCourse } from '../contexts/CourseContext';
 import Header from '../components/Header';
 import { EditIcon, DeleteIcon } from '../components/icons';
 import { db } from '../firebase';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, writeBatch } from 'firebase/firestore';
+import { mockCourses, mockNews, mockTestimonials } from '../utils/mockData';
 
 type AdminTab = 'courses' | 'users' | 'hero' | 'news' | 'testimonials';
 
@@ -59,6 +60,7 @@ const AdminPage: React.FC = () => {
     
     const [activeTab, setActiveTab] = React.useState<AdminTab>('courses');
     const [heroSaveStatus, setHeroSaveStatus] = React.useState('');
+    const [isSeeding, setIsSeeding] = React.useState(false);
 
     // Realtime Listeners
     React.useEffect(() => {
@@ -178,6 +180,52 @@ const AdminPage: React.FC = () => {
             }
         }
     };
+
+    const handleSeedDatabase = async () => {
+        if (!window.confirm("This will populate your empty database with sample data (Courses, News, Testimonials). Continue?")) return;
+        
+        setIsSeeding(true);
+        const batch = writeBatch(db);
+
+        // Seed Courses
+        mockCourses.forEach(c => {
+            const docRef = doc(db, 'courses', c.id);
+            batch.set(docRef, c);
+        });
+
+        // Seed News
+        mockNews.forEach(n => {
+            const docRef = doc(db, 'news', n.id);
+            batch.set(docRef, n);
+        });
+
+        // Seed Testimonials
+        mockTestimonials.forEach(t => {
+            const docRef = doc(db, 'testimonials', t.id);
+            batch.set(docRef, t);
+        });
+        
+        // Seed Hero (if not exists)
+        const heroRef = doc(db, 'settings', 'hero');
+        const defaultHero: HeroContent = {
+             title: 'Design Your Future.',
+             subtitle: 'Discover curated courses in technology and design, crafted to elevate your skills and professional life.',
+             backgroundImageUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80',
+             signInImageUrl: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60',
+             signUpImageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60'
+        };
+        batch.set(heroRef, defaultHero, { merge: true });
+
+        try {
+            await batch.commit();
+            alert("Database Seeded Successfully!");
+        } catch (error) {
+            console.error("Error seeding database:", error);
+            alert("Error seeding database.");
+        } finally {
+            setIsSeeding(false);
+        }
+    };
     
     const openCourseModal = (c?: Course) => { setCurrentCourse(c || { title: '', description: '', category: '', imageUrl: '', teacher: '', duration: '', rating: 0, price: 0, content: [] }); setIsCourseModalOpen(true); };
     const openUserModal = (u: User) => { setCurrentUser(u); setIsUserModalOpen(true); };
@@ -192,9 +240,20 @@ const AdminPage: React.FC = () => {
             <main className="container mx-auto p-4 sm:p-8 pt-28">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-bold text-slate-800">{t('adminDashboard')}</h1>
-                    <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-full font-medium border border-emerald-200">
-                        Live Database Connected
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-full font-medium border border-emerald-200">
+                            Live Database Connected
+                        </span>
+                        {(courses.length === 0 && news.length === 0 && testimonials.length === 0) && (
+                            <button 
+                                onClick={handleSeedDatabase} 
+                                disabled={isSeeding}
+                                className="bg-emerald-600 text-white text-xs px-3 py-1 rounded hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                                {isSeeding ? "Seeding..." : "Seed Database"}
+                            </button>
+                        )}
+                    </div>
                 </div>
                 
                 <div className="bg-white p-4 rounded-lg shadow mb-8">

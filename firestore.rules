@@ -10,78 +10,75 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Get the User document of the requester
+    // Check if the requester is the owner of the document
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Fetch the user's profile document safely
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Check if the requester is an Admin
+    // Check if the user exists and has the 'ADMIN' role
     function isAdmin() {
       return isSignedIn() && 
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              getUserData().role == 'ADMIN';
     }
 
-    // Check if the requester is accessing their own data
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     // --- Collection Rules ---
 
     // 1. Settings (Hero content, etc.)
-    // Public read (for landing page), Admin write
-    match /settings/{document} {
+    // READ: Public
+    // WRITE: Admin only
+    match /settings/{document=**} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // 2. Users Collection
-    // Admin can read/write all. Users can read/write their own profile.
-    match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow write: if isOwner(userId) || isAdmin();
-    }
-
-    // 3. Courses Collection
-    // Public read (catalog), Admin write
+    // 2. Courses Collection
+    // READ: Public
+    // WRITE: Admin only
     match /courses/{courseId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // 4. News Collection
-    // Public read, Admin write
+    // 3. News Collection
+    // READ: Public
+    // WRITE: Admin only
     match /news/{newsId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // 5. Testimonials Collection
-    // Public read. 
-    // Admin can write any. 
-    // Users can create/update/delete if the 'author' field matches their username.
+    // 4. Testimonials Collection
+    // READ: Public
+    // WRITE: Admin can do anything. Users can manage their own testimonials.
     match /testimonials/{testimonialId} {
       allow read: if true;
       
+      // Create: User must be signed in and author name must match their profile
       allow create: if isAdmin() || (
         isSignedIn() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         request.resource.data.author == getUserData().username
       );
       
-      allow update: if isAdmin() || (
-        isSignedIn() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        resource.data.author == getUserData().username && 
-        request.resource.data.author == getUserData().username
-      );
-      
-      allow delete: if isAdmin() || (
+      // Update/Delete: User must own the testimonial (author matches)
+      allow update, delete: if isAdmin() || (
         isSignedIn() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         resource.data.author == getUserData().username
       );
+    }
+
+    // 5. Users Collection
+    // READ/WRITE: Admin can access all. Users can only access their own document.
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) || isAdmin();
     }
   }
 }

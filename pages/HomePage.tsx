@@ -11,7 +11,7 @@ import BottomNav from '../components/BottomNav';
 import { useAuth } from '../contexts/AuthContext';
 import { useCourse } from '../contexts/CourseContext';
 import { db } from '../firebase';
-import { doc, collection, getDoc, getDocs } from 'firebase/firestore';
+import { doc, collection, onSnapshot, getDoc } from 'firebase/firestore';
 
 const NewsCard: React.FC<{ article: NewsArticle }> = ({ article }) => (
     <div className="group h-80 [perspective:1000px]">
@@ -76,25 +76,31 @@ const HomePage: React.FC = () => {
     });
 
     React.useEffect(() => {
-        const fetchData = async () => {
+        // Fetch Hero Content (One-time fetch is usually sufficient for Hero, or use onSnapshot if preferred)
+        const fetchHero = async () => {
             try {
-                // Fetch Hero
                 const heroSnap = await getDoc(doc(db, 'settings', 'hero'));
                 if(heroSnap.exists()) setHeroContent(heroSnap.data() as HeroContent);
-                
-                // Fetch News (limit 2)
-                const newsSnap = await getDocs(collection(db, 'news'));
-                setNews(newsSnap.docs.map(d => ({id:d.id, ...d.data()} as NewsArticle)));
-                
-                // Fetch Testimonials
-                const testSnap = await getDocs(collection(db, 'testimonials'));
-                setTestimonials(testSnap.docs.map(d => ({id:d.id, ...d.data()} as Testimonial)));
-
             } catch (error) {
-                console.error("Error fetching homepage data:", error);
+                console.error("Error fetching hero data:", error);
             }
         };
-        fetchData();
+        fetchHero();
+
+        // Real-time News
+        const unsubNews = onSnapshot(collection(db, 'news'), (snapshot) => {
+            setNews(snapshot.docs.map(d => ({id:d.id, ...d.data()} as NewsArticle)));
+        }, (error) => console.error("Error fetching news:", error));
+
+        // Real-time Testimonials
+        const unsubTestimonials = onSnapshot(collection(db, 'testimonials'), (snapshot) => {
+            setTestimonials(snapshot.docs.map(d => ({id:d.id, ...d.data()} as Testimonial)));
+        }, (error) => console.error("Error fetching testimonials:", error));
+
+        return () => {
+            unsubNews();
+            unsubTestimonials();
+        };
     }, []);
 
     const [isPaymentModalOpen, setPaymentModalOpen] = React.useState(false);
