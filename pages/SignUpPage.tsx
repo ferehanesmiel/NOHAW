@@ -37,87 +37,56 @@ const SignUpPage: React.FC = () => {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-slate-100 p-4">
-            <div className="w-full max-w-md p-8 space-y-6 bg-white/70 backdrop-blur-xl rounded-2xl shadow-lg">
-                <div className="text-center">
-                    <Link to="/" className="inline-block">
-                        <LogoIcon />
-                    </Link>
-                    <h2 className="mt-6 text-3xl font-extrabold text-slate-900">{t('signUpForAccount')}</h2>
-                </div>
-                
-                <button
-                    onClick={handleGoogleSignIn}
-                    className="w-full flex justify-center items-center py-2 px-4 border border-slate-300 rounded-md shadow-sm bg-white text-sm font-medium text-slate-700 hover:bg-slate-50"
-                >
-                    <GoogleIcon />
-                    {t('signInWithGoogle')}
-                </button>
-                
-                <div className="flex items-center justify-center space-x-2">
-                    <span className="h-px w-16 bg-slate-300"></span>
-                    <span className="text-slate-500 font-normal">OR</span>
-                    <span className="h-px w-16 bg-slate-300"></span>
-                </div>
-
-                <form className="space-y-4" onSubmit={handleSubmit}>
-                     <div>
-                        <label htmlFor="username" className="sr-only">{t('username')}</label>
-                        <input
-                            id="username"
-                            name="username"
-                            type="text"
-                            required
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            className="appearance-none relative block w-full px-3 py-2 border border-slate-300 placeholder-slate-500 text-slate-900 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                            placeholder={t('username')}
-                        />
-                    </div>
-                     <div>
-                        <label htmlFor="email" className="sr-only">{t('email')}</label>
-                        <input
-                            id="email"
-                            name="email"
-                            type="email"
-                            required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="appearance-none relative block w-full px-3 py-2 border border-slate-300 placeholder-slate-500 text-slate-900 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                            placeholder={t('email')}
-                        />
-                    </div>
+        <div className="min-h-screen flex bg-gray-50">
+             <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+                 <div className="mx-auto w-full max-w-sm lg:w-96">
                     <div>
-                        <label htmlFor="password" className="sr-only">{t('password')}</label>
-                        <input
-                            id="password"
-                            name="password"
-                            type="password"
-                            required
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="appearance-none relative block w-full px-3 py-2 border border-slate-300 placeholder-slate-500 text-slate-900 rounded-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                            placeholder={t('password')}
-                        />
+                        <Link to="/" className="inline-block mb-6">
+                            <LogoIcon />
+                        </Link>
+                        <h2 className="text-3xl font-bold text-gray-900">{t('signUpForAccount')}</h2>
                     </div>
 
-                    {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+                    <div className="mt-8">
+                         <form className="space-y-6" onSubmit={handleSubmit}>
+                             <div>
+                                <label htmlFor="username" className="block text-sm font-medium text-gray-700">{t('username')}</label>
+                                <div className="mt-1"><input id="username" type="text" required value={username} onChange={(e) => setUsername(e.target.value)} className="elegant-input"/></div>
+                            </div>
+                             <div>
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700">{t('email')}</label>
+                                <div className="mt-1"><input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="elegant-input"/></div>
+                            </div>
+                            <div>
+                                <label htmlFor="password"  className="block text-sm font-medium text-gray-700">{t('password')}</label>
+                                 <div className="mt-1"><input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="elegant-input"/></div>
+                            </div>
+                            
+                            {error && <p className="text-sm text-red-600">{error}</p>}
 
-                    <div>
-                        <button
-                            type="submit"
-                            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 mt-4"
-                        >
-                            {t('signUp')}
-                        </button>
+                            <div><button type="submit" className="w-full elegant-button">{t('signUp')}</button></div>
+                        </form>
+
+                         <div className="mt-6">
+                            <div className="relative">
+                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-300" /></div>
+                                <div className="relative flex justify-center text-sm"><span className="px-2 bg-gray-50 text-gray-500">Or sign up with</span></div>
+                            </div>
+                            <div className="mt-6">
+                                <button onClick={handleGoogleSignIn} className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                    <GoogleIcon /><span>{t('signInWithGoogle')}</span>
+                                </button>
+                            </div>
+                        </div>
+                        <p className="mt-6 text-center text-sm text-gray-600">
+                            {t('alreadyHaveAccount')}{' '}
+                            <Link to="/signin" className="font-medium text-[--accent] hover:text-[--accent-hover]">{t('signIn')}</Link>
+                        </p>
                     </div>
-                </form>
-                <p className="text-center text-sm text-slate-600">
-                    {t('alreadyHaveAccount')}{' '}
-                    <Link to="/signin" className="font-medium text-emerald-600 hover:text-emerald-500">
-                        {t('signIn')}
-                    </Link>
-                </p>
+                </div>
+            </div>
+             <div className="hidden lg:block relative w-0 flex-1 bg-gray-800">
+                <img className="absolute inset-0 h-full w-full object-cover" src="https://images.unsplash.com/photo-1505373877841-8d25f7d46678?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80" alt="People at a conference" />
             </div>
         </div>
     );

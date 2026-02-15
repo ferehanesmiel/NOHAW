@@ -5,12 +5,15 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 
 type AuthContextType = {
   user: User | null;
+  users: User[];
   signIn: (email: string, password?: string, isGoogleSignIn?: boolean) => boolean;
   signUp: (email: string, password: string, username: string) => boolean;
   signOut: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
   updateUser: (username: string) => void;
+  updateUserDetails: (userId: string, details: Partial<User>) => void;
+  deleteUser: (userId: string) => void;
   changePassword: (currentPassword: string, newPassword: string) => boolean;
 };
 
@@ -71,6 +74,19 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   };
 
+  const updateUserDetails = (userId: string, details: Partial<User>) => {
+    setUsers(currentUsers => currentUsers.map(u => u.id === userId ? { ...u, ...details } : u));
+  };
+  
+  const deleteUser = (userId: string) => {
+      // Prevent admin from deleting themselves
+      if(user && user.id === userId && user.role === UserRole.ADMIN) {
+          alert("Admin cannot delete their own account.");
+          return;
+      }
+      setUsers(currentUsers => currentUsers.filter(u => u.id !== userId));
+  }
+
   const changePassword = (currentPassword: string, newPassword: string): boolean => {
     if (!user || user.password !== currentPassword) {
       return false;
@@ -90,7 +106,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const isAdmin = user?.role === UserRole.ADMIN;
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut, isAuthenticated, isAdmin, updateUser, changePassword }}>
+    <AuthContext.Provider value={{ user, users, signIn, signUp, signOut, isAuthenticated, isAdmin, updateUser, updateUserDetails, deleteUser, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

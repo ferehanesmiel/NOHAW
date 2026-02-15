@@ -5,6 +5,10 @@ export interface Course {
   description: string;
   category: string;
   imageUrl: string;
+  teacher: string;
+  duration: string;
+  rating: number;
+  price: number; // 0 for free
   content?: ContentBlock[];
 }
 
@@ -37,4 +41,21 @@ export type ContentBlock = {
 export interface HeroContent {
   title: string;
   subtitle: string;
+  backgroundImageUrl: string;
+}
+
+export interface NewsArticle {
+  id: string;
+  title: string;
+  content: string;
+  imageUrl: string;
+  date: string;
+}
+
+export interface Testimonial {
+  id: string;
+  author: string;
+  role: string;
+  quote: string;
+  imageUrl: string;
 }

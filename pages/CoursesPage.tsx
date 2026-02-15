@@ -13,18 +13,18 @@ const CoursesPage: React.FC = () => {
     const [courses] = useLocalStorage<Course[]>('courses', []);
 
     return (
-        <div className="bg-slate-50 min-h-screen flex flex-col">
+        <div className="bg-white min-h-screen flex flex-col">
             <Header />
             <main className="flex-grow pt-20"> {/* Offset for fixed header */}
                 <div className="py-12 bg-slate-50">
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center mb-12">
-                            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">{t('allCourses')}</h1>
+                            <h1 className="text-4xl font-bold text-slate-800 tracking-tight">{t('allCourses')}</h1>
                         </div>
                         {courses.length > 0 ? (
                             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-                                {courses.map((course, index) => (
-                                    <CourseCard key={course.id} course={course} color={['blue', 'pink', 'yellow'][index % 3] as 'blue' | 'pink' | 'yellow'} />
+                                {courses.map((course) => (
+                                    <CourseCard key={course.id} course={course} />
                                 ))}
                             </div>
                         ) : (

@@ -77,14 +77,14 @@ const ProfilePage: React.FC = () => {
                         <form onSubmit={handleDetailsSubmit} className="space-y-6">
                             <div>
                                 <label htmlFor="username" className="block text-sm font-medium text-slate-700">{t('username')}</label>
-                                <input type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm"/>
+                                <input type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} className="mt-1 elegant-input"/>
                             </div>
                             <div>
                                 <label htmlFor="email" className="block text-sm font-medium text-slate-700">{t('email')}</label>
-                                <input type="email" id="email" value={email} className="mt-1 block w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-md shadow-sm sm:text-sm" readOnly />
+                                <input type="email" id="email" value={email} className="mt-1 elegant-input bg-slate-200" readOnly />
                             </div>
                             <div className="flex justify-end">
-                                <button type="submit" className="tech-glow-button py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md">
+                                <button type="submit" className="elegant-button">
                                     {t('saveChanges')}
                                 </button>
                             </div>
@@ -104,18 +104,18 @@ const ProfilePage: React.FC = () => {
                         <form onSubmit={handlePasswordSubmit} className="space-y-4">
                             <div>
                                 <label htmlFor="currentPassword">{t('currentPassword')}</label>
-                                <input type="password" id="currentPassword" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm" required/>
+                                <input type="password" id="currentPassword" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="mt-1 elegant-input" required/>
                             </div>
                              <div>
                                 <label htmlFor="newPassword">{t('newPassword')}</label>
-                                <input type="password" id="newPassword" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm" required/>
+                                <input type="password" id="newPassword" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="mt-1 elegant-input" required/>
                             </div>
                              <div>
                                 <label htmlFor="confirmNewPassword">{t('confirmNewPassword')}</label>
-                                <input type="password" id="confirmNewPassword" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm" required/>
+                                <input type="password" id="confirmNewPassword" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} className="mt-1 elegant-input" required/>
                             </div>
                              <div className="flex justify-end pt-2">
-                                <button type="submit" className="tech-glow-button py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md">
+                                <button type="submit" className="elegant-button">
                                     {t('changePassword')}
                                 </button>
                             </div>
