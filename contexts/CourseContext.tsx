@@ -1,57 +1,92 @@
 
 import * as React from 'react';
 import { Course } from '../types';
-import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useAuth } from './AuthContext';
-import { mockCourses } from '../utils/mockData';
-
-type Enrollments = { [userId: string]: string[] }; // userId -> courseId[]
-type Progress = { [userId: string]: { [courseId: string]: number } }; // userId -> courseId -> percentage
+import { db } from '../firebase';
+import { 
+    collection, 
+    getDocs, 
+    doc, 
+    setDoc, 
+    updateDoc, 
+    arrayUnion, 
+    getDoc,
+    onSnapshot
+} from 'firebase/firestore';
 
 type CourseContextType = {
   courses: Course[];
-  setCourses: React.Dispatch<React.SetStateAction<Course[]>>;
+  setCourses: React.Dispatch<React.SetStateAction<Course[]>>; // kept for AdminPage compatibility, though in real app we'd use DB methods
   enrollments: string[]; // for current user
   progress: { [courseId: string]: number }; // for current user
-  enroll: (courseId: string) => void;
-  updateProgress: (courseId: string, newProgress: number) => void;
+  enroll: (courseId: string) => Promise<void>;
+  updateProgress: (courseId: string, newProgress: number) => Promise<void>;
+  refreshCourses: () => void;
 };
 
 const CourseContext = React.createContext<CourseContextType | undefined>(undefined);
 
 export const CourseProvider = ({ children }: React.PropsWithChildren) => {
     const { user } = useAuth();
-    const [courses, setCourses] = useLocalStorage<Course[]>('courses', mockCourses);
-    const [allEnrollments, setAllEnrollments] = useLocalStorage<Enrollments>('enrollments', {});
-    const [allProgress, setAllProgress] = useLocalStorage<Progress>('progress', {});
+    const [courses, setCourses] = React.useState<Course[]>([]);
+    const [enrollments, setEnrollments] = React.useState<string[]>([]);
+    const [progress, setProgress] = React.useState<{ [courseId: string]: number }>({});
 
-    const enroll = (courseId: string) => {
+    // Fetch Courses Realtime
+    React.useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, 'courses'), (snapshot) => {
+            const courseList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course));
+            setCourses(courseList);
+        });
+        return unsubscribe;
+    }, []);
+
+    // Fetch User Enrollments & Progress
+    React.useEffect(() => {
+        if (!user) {
+            setEnrollments([]);
+            setProgress({});
+            return;
+        }
+
+        const userRef = doc(db, 'users', user.id);
+        const unsubscribe = onSnapshot(userRef, (docSnap) => {
+             if (docSnap.exists()) {
+                 const data = docSnap.data();
+                 setEnrollments(data.enrolledCourses || []);
+                 setProgress(data.courseProgress || {});
+             }
+        });
+
+        return unsubscribe;
+    }, [user]);
+
+    const enroll = async (courseId: string) => {
         if (!user) return;
-        setAllEnrollments(prev => {
-            const userEnrollments = prev[user.id] || [];
-            if (!userEnrollments.includes(courseId)) {
-                return { ...prev, [user.id]: [...userEnrollments, courseId] };
-            }
-            return prev;
+        const userRef = doc(db, 'users', user.id);
+        // Add to enrolledCourses array in Firestore
+        await updateDoc(userRef, {
+            enrolledCourses: arrayUnion(courseId)
         });
     };
 
-    const updateProgress = (courseId: string, newProgress: number) => {
+    const updateProgress = async (courseId: string, newProgress: number) => {
         if (!user) return;
-        setAllProgress(prev => {
-            const userProgress = prev[user.id] || {};
-            return {
-                ...prev,
-                [user.id]: { ...userProgress, [courseId]: newProgress },
-            };
+        const userRef = doc(db, 'users', user.id);
+        // We need to update a specific field in the map. Firestore syntax for nested fields: "courseProgress.courseID"
+        await updateDoc(userRef, {
+            [`courseProgress.${courseId}`]: newProgress
         });
     };
 
-    const userEnrollments = user ? allEnrollments[user.id] || [] : [];
-    const userProgress = user ? allProgress[user.id] || {} : {};
+    const refreshCourses = async () => {
+         const snapshot = await getDocs(collection(db, 'courses'));
+         const courseList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course));
+         setCourses(courseList);
+    };
 
     return (
-        <CourseContext.Provider value={{ courses, setCourses, enrollments: userEnrollments, progress: userProgress, enroll, updateProgress }}>
+        <CourseContext.Provider value={{ courses, setCourses, enrollments, progress, enroll, updateProgress, refreshCourses }}>
             {children}
         </CourseContext.Provider>
     );

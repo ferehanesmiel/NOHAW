@@ -8,8 +8,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCourse } from '../contexts/CourseContext';
 import Header from '../components/Header';
 import { EditIcon, DeleteIcon } from '../components/icons';
-import { useLocalStorage } from '../hooks/useLocalStorage';
-import { mockNews, mockTestimonials } from '../utils/mockData';
+import { db, storage } from '../firebase';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 type AdminTab = 'courses' | 'users' | 'hero' | 'news' | 'testimonials';
 
@@ -29,25 +30,37 @@ export const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
   return <Droppable {...props}>{children}</Droppable>;
 };
 
+// Helper for image upload
+const uploadImage = async (file: File, path: string): Promise<string> => {
+    const storageRef = ref(storage, `${path}/${Date.now()}_${file.name}`);
+    await uploadBytes(storageRef, file);
+    return await getDownloadURL(storageRef);
+};
+
 const AdminPage: React.FC = () => {
     const { t } = useLanguage();
-    const { users, updateUserDetails, deleteUser } = useAuth();
-    const { courses, setCourses } = useCourse();
-    const [news, setNews] = useLocalStorage<NewsArticle[]>('news', mockNews);
-    const [testimonials, setTestimonials] = useLocalStorage<Testimonial[]>('testimonials', mockTestimonials);
-    const [heroContent, setHeroContent] = useLocalStorage<HeroContent>('heroContent', {
-      title: 'Design Your Future.',
-      subtitle: 'Discover curated courses in technology and design, crafted to elevate your skills and professional life.',
-      backgroundImageUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80',
-      signInImageUrl: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60',
-      signUpImageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60'
-    });
+    const { updateUserDetails } = useAuth(); // deleteUser is local only in context, we use direct DB here
+    const { courses } = useCourse(); // Courses come from context (realtime)
     
+    // Local state for non-context collections
+    const [users, setUsers] = React.useState<User[]>([]);
+    const [news, setNews] = React.useState<NewsArticle[]>([]);
+    const [testimonials, setTestimonials] = React.useState<Testimonial[]>([]);
+    const [heroContent, setHeroContent] = React.useState<HeroContent>({
+      title: 'Design Your Future.',
+      subtitle: 'Discover curated courses...',
+      backgroundImageUrl: '',
+      signInImageUrl: '',
+      signUpImageUrl: ''
+    });
+
+    // Modals
     const [isCourseModalOpen, setIsCourseModalOpen] = React.useState(false);
     const [isUserModalOpen, setIsUserModalOpen] = React.useState(false);
     const [isNewsModalOpen, setIsNewsModalOpen] = React.useState(false);
     const [isTestimonialModalOpen, setIsTestimonialModalOpen] = React.useState(false);
 
+    // Editing State
     const [currentCourse, setCurrentCourse] = React.useState<Partial<Course> | null>(null);
     const [currentUser, setCurrentUser] = React.useState<Partial<User> | null>(null);
     const [currentNews, setCurrentNews] = React.useState<Partial<NewsArticle> | null>(null);
@@ -55,107 +68,120 @@ const AdminPage: React.FC = () => {
     
     const [activeTab, setActiveTab] = React.useState<AdminTab>('courses');
     const [heroSaveStatus, setHeroSaveStatus] = React.useState('');
+    const [uploading, setUploading] = React.useState(false);
 
-    // FIX: Define callbacks properly at the top level to avoid hook violations
-    const onCourseImageDrop = React.useCallback((acceptedFiles: File[]) => {
-      const file = acceptedFiles[0];
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if(event.target && typeof event.target.result === 'string') {
-            setCurrentCourse((prev: any) => ({...prev, imageUrl: event.target.result}));
-        }
-      };
-      if(file) reader.readAsDataURL(file);
-    }, []);
-
-    const onNewsImageDrop = React.useCallback((acceptedFiles: File[]) => {
-        const file = acceptedFiles[0];
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if(event.target && typeof event.target.result === 'string') {
-              setCurrentNews((prev: any) => ({...prev, imageUrl: event.target.result}));
-          }
-        };
-        if(file) reader.readAsDataURL(file);
-    }, []);
-
-    const onTestimonialImageDrop = React.useCallback((acceptedFiles: File[]) => {
-        const file = acceptedFiles[0];
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if(event.target && typeof event.target.result === 'string') {
-              setCurrentTestimonial((prev: any) => ({...prev, imageUrl: event.target.result}));
-          }
-        };
-        if(file) reader.readAsDataURL(file);
-    }, []);
-
-
+    // Realtime Listeners
     React.useEffect(() => {
-        if(heroSaveStatus) { const timer = setTimeout(() => setHeroSaveStatus(''), 2000); return () => clearTimeout(timer); }
-    }, [heroSaveStatus]);
+        const unsubUsers = onSnapshot(collection(db, 'users'), snap => setUsers(snap.docs.map(d => ({id:d.id, ...d.data()} as User))));
+        const unsubNews = onSnapshot(collection(db, 'news'), snap => setNews(snap.docs.map(d => ({id:d.id, ...d.data()} as NewsArticle))));
+        const unsubTestimonials = onSnapshot(collection(db, 'testimonials'), snap => setTestimonials(snap.docs.map(d => ({id:d.id, ...d.data()} as Testimonial))));
+        
+        // Fetch Hero
+        const fetchHero = async () => {
+            const docSnap = await getDoc(doc(db, 'settings', 'hero'));
+            if(docSnap.exists()) setHeroContent(docSnap.data() as HeroContent);
+        };
+        fetchHero();
 
-    // Modal openers
+        return () => { unsubUsers(); unsubNews(); unsubTestimonials(); };
+    }, []);
+
+    // --- Image Upload Handlers ---
+    
+    const handleCourseImageDrop = async (acceptedFiles: File[]) => {
+        if(acceptedFiles.length > 0) {
+            setUploading(true);
+            const url = await uploadImage(acceptedFiles[0], 'courses');
+            setCurrentCourse(prev => ({...prev, imageUrl: url}));
+            setUploading(false);
+        }
+    };
+    const handleNewsImageDrop = async (acceptedFiles: File[]) => {
+        if(acceptedFiles.length > 0) {
+            setUploading(true);
+            const url = await uploadImage(acceptedFiles[0], 'news');
+            setCurrentNews(prev => ({...prev, imageUrl: url}));
+            setUploading(false);
+        }
+    };
+    const handleTestimonialImageDrop = async (acceptedFiles: File[]) => {
+        if(acceptedFiles.length > 0) {
+            setUploading(true);
+            const url = await uploadImage(acceptedFiles[0], 'testimonials');
+            setCurrentTestimonial(prev => ({...prev, imageUrl: url}));
+            setUploading(false);
+        }
+    };
+    const handleHeroImageDrop = async (acceptedFiles: File[], type: 'bg' | 'signin' | 'signup') => {
+        if(acceptedFiles.length > 0) {
+            setHeroSaveStatus('Uploading...');
+            const url = await uploadImage(acceptedFiles[0], 'hero');
+            setHeroContent(prev => {
+                const newState = {...prev};
+                if(type === 'bg') newState.backgroundImageUrl = url;
+                if(type === 'signin') newState.signInImageUrl = url;
+                if(type === 'signup') newState.signUpImageUrl = url;
+                return newState;
+            });
+            setHeroSaveStatus('Image uploaded. Click Save.');
+        }
+    };
+
+
+    // --- Save Handlers (Firestore) ---
+
+    const handleSaveCourse = async (e: React.FormEvent) => { 
+        e.preventDefault(); 
+        if (!currentCourse) return; 
+        const id = currentCourse.id || Date.now().toString();
+        const courseData = { ...currentCourse, price: Number(currentCourse.price), rating: Number(currentCourse.rating), id };
+        await setDoc(doc(db, 'courses', id), courseData);
+        setIsCourseModalOpen(false); 
+    };
+
+    const handleSaveUser = async (e: React.FormEvent) => { 
+        e.preventDefault(); 
+        if(!currentUser?.id) return; 
+        await updateUserDetails(currentUser.id, currentUser); 
+        setIsUserModalOpen(false); 
+    };
+
+    const handleSaveNews = async (e: React.FormEvent) => { 
+        e.preventDefault(); 
+        if(!currentNews) return; 
+        const id = currentNews.id || Date.now().toString();
+        await setDoc(doc(db, 'news', id), { ...currentNews, id });
+        setIsNewsModalOpen(false); 
+    };
+
+    const handleSaveTestimonial = async (e: React.FormEvent) => { 
+        e.preventDefault(); 
+        if(!currentTestimonial) return; 
+        const id = currentTestimonial.id || Date.now().toString();
+        await setDoc(doc(db, 'testimonials', id), { ...currentTestimonial, id });
+        setIsTestimonialModalOpen(false); 
+    };
+
+    const handleSaveHero = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await setDoc(doc(db, 'settings', 'hero'), heroContent);
+        setHeroSaveStatus('Saved!');
+        setTimeout(() => setHeroSaveStatus(''), 2000);
+    };
+    
+    const handleDelete = async (collectionName: string, id: string) => { 
+        if(window.confirm('Are you sure?')) await deleteDoc(doc(db, collectionName, id)); 
+    };
+    
     const openCourseModal = (c?: Course) => { setCurrentCourse(c || { title: '', description: '', category: '', imageUrl: '', teacher: '', duration: '', rating: 0, price: 0, content: [] }); setIsCourseModalOpen(true); };
     const openUserModal = (u: User) => { setCurrentUser(u); setIsUserModalOpen(true); };
     const openNewsModal = (n?: NewsArticle) => { setCurrentNews(n || { title: '', content: '', imageUrl: '', date: new Date().toISOString().split('T')[0] }); setIsNewsModalOpen(true); };
     const openTestimonialModal = (t?: Testimonial) => { setCurrentTestimonial(t || { author: '', role: '', quote: '', imageUrl: '' }); setIsTestimonialModalOpen(true); };
 
-    // Handlers
-    const handleSaveCourse = (e: React.FormEvent) => { 
-        e.preventDefault(); 
-        if (!currentCourse) return; 
-        
-        // Ensure numbers are actually numbers before saving
-        const courseToSave = {
-            ...currentCourse,
-            price: Number(currentCourse.price),
-            rating: Number(currentCourse.rating)
-        };
 
-        if (currentCourse.id) { 
-            setCourses(courses.map(c => c.id === currentCourse!.id ? courseToSave as Course : c)); 
-        } else { 
-            setCourses([...courses, { ...courseToSave, id: Date.now().toString() } as Course]); 
-        } 
-        setIsCourseModalOpen(false); 
-    };
-
-    const handleSaveUser = (e: React.FormEvent) => { e.preventDefault(); if(!currentUser?.id) return; updateUserDetails(currentUser.id, currentUser); setIsUserModalOpen(false); };
-    const handleSaveNews = (e: React.FormEvent) => { e.preventDefault(); if(!currentNews) return; if (currentNews.id) { setNews(news.map(n => n.id === currentNews.id ? currentNews as NewsArticle : n)); } else { setNews([...news, { ...currentNews, id: Date.now().toString() } as NewsArticle]); } setIsNewsModalOpen(false); };
-    const handleSaveTestimonial = (e: React.FormEvent) => { e.preventDefault(); if(!currentTestimonial) return; if(currentTestimonial.id) { setTestimonials(testimonials.map(t => t.id === currentTestimonial.id ? currentTestimonial as Testimonial : t)); } else { setTestimonials([...testimonials, { ...currentTestimonial, id: Date.now().toString() } as Testimonial]); } setIsTestimonialModalOpen(false); };
-    
-    const handleDeleteCourse = (id: string) => { if(window.confirm('Are you sure?')) setCourses(courses.filter(c => c.id !== id)); };
-    const handleDeleteUser = (id: string) => { if(window.confirm('Are you sure?')) deleteUser(id); };
-    const handleDeleteNews = (id: string) => { if(window.confirm('Are you sure?')) setNews(news.filter(n => n.id !== id)); };
-    const handleDeleteTestimonial = (id: string) => { if(window.confirm('Are you sure?')) setTestimonials(testimonials.filter(t => t.id !== id)); };
-    
-    const handleHeroChange = (field: keyof HeroContent, value: string) => { setHeroContent(p => ({ ...p, [field]: value })); };
-    
-    const onHeroImageDrop = React.useCallback((acceptedFiles: File[]) => {
-      const file = acceptedFiles[0];
-      const reader = new FileReader();
-      reader.onload = (event) => { if(event.target?.result) setHeroContent(p => ({...p, backgroundImageUrl: event.target.result as string})) };
-      if(file) reader.readAsDataURL(file);
-    }, [setHeroContent]);
-
-    const onSignInImageDrop = React.useCallback((acceptedFiles: File[]) => {
-      const file = acceptedFiles[0];
-      const reader = new FileReader();
-      reader.onload = (event) => { if(event.target?.result) setHeroContent(p => ({...p, signInImageUrl: event.target.result as string})) };
-      if(file) reader.readAsDataURL(file);
-    }, [setHeroContent]);
-
-    const onSignUpImageDrop = React.useCallback((acceptedFiles: File[]) => {
-      const file = acceptedFiles[0];
-      const reader = new FileReader();
-      reader.onload = (event) => { if(event.target?.result) setHeroContent(p => ({...p, signUpImageUrl: event.target.result as string})) };
-      if(file) reader.readAsDataURL(file);
-    }, [setHeroContent]);
-
-    const heroDropzone = useDropzone({ onDrop: onHeroImageDrop, accept: {'image/*':[]} });
-    const signInDropzone = useDropzone({ onDrop: onSignInImageDrop, accept: {'image/*':[]} });
-    const signUpDropzone = useDropzone({ onDrop: onSignUpImageDrop, accept: {'image/*':[]} });
+    const heroDropzone = useDropzone({ onDrop: (f) => handleHeroImageDrop(f, 'bg'), accept: {'image/*':[]} });
+    const signInDropzone = useDropzone({ onDrop: (f) => handleHeroImageDrop(f, 'signin'), accept: {'image/*':[]} });
+    const signUpDropzone = useDropzone({ onDrop: (f) => handleHeroImageDrop(f, 'signup'), accept: {'image/*':[]} });
     
     const TabButton: React.FC<{tab: AdminTab, label: string}> = ({ tab, label }) => ( <button onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tab ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-200'}`}>{label}</button> );
 
@@ -164,6 +190,8 @@ const AdminPage: React.FC = () => {
             <Header />
             <main className="container mx-auto p-4 sm:p-8 pt-28">
                 <h1 className="text-3xl font-bold text-slate-800 mb-6">{t('adminDashboard')}</h1>
+                {uploading && <div className="fixed top-24 right-8 bg-blue-600 text-white px-4 py-2 rounded shadow animate-pulse">Uploading Image...</div>}
+                
                 <div className="bg-white p-4 rounded-lg shadow mb-8">
                     <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4">
                         <TabButton tab="courses" label={t('courseManagement')} />
@@ -173,17 +201,17 @@ const AdminPage: React.FC = () => {
                         <TabButton tab="hero" label="Hero & Images" />
                     </div>
                     <div className="pt-6">
-                        {activeTab === 'courses' && ( <div><div className="flex justify-end mb-4"><button onClick={() => openCourseModal()} className="elegant-button">{t('addCourse')}</button></div><div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Image</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('title')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('teacher')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('price')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{courses.length > 0 ? courses.map(course => (<tr key={course.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4"><img src={course.imageUrl} alt={course.title} className="w-16 h-10 object-cover rounded"/></td><td className="px-6 py-4 text-sm text-slate-900">{course.title}</td><td className="px-6 py-4 text-sm text-slate-500">{course.teacher}</td><td className="px-6 py-4 text-sm text-slate-500">{Number(course.price) > 0 ? `$${course.price}`: t('free')}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center"><button onClick={() => openCourseModal(course)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDeleteCourse(course.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={5} className="text-center py-8 text-slate-500">No courses found. Add a new one to get started.</td></tr>)}</tbody></table></div></div> )}
-                        {activeTab === 'users' && ( <div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('username')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('email')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('role')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{users.length > 0 ? users.map(user => (<tr key={user.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4 text-sm text-slate-900">{user.username}</td><td className="px-6 py-4 text-sm text-slate-500">{user.email}</td><td className="px-6 py-4 text-sm text-slate-500">{user.role}</td><td className="px-6 py-4 flex items-center"><button onClick={() => openUserModal(user)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={4} className="text-center py-8 text-slate-500">No users found.</td></tr>)}</tbody></table></div> )}
-                        {activeTab === 'news' && ( <div><div className="flex justify-end mb-4"><button onClick={() => openNewsModal()} className="elegant-button">{t('addNews')}</button></div><div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Image</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('title')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('date')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{news.length > 0 ? news.map(article => (<tr key={article.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4"><img src={article.imageUrl} alt={article.title} className="w-16 h-10 object-cover rounded"/></td><td className="px-6 py-4 text-sm text-slate-900">{article.title}</td><td className="px-6 py-4 text-sm text-slate-500">{article.date}</td><td className="px-6 py-4 flex items-center"><button onClick={() => openNewsModal(article)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDeleteNews(article.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={4} className="text-center py-8 text-slate-500">No news articles found.</td></tr>)}</tbody></table></div></div> )}
-                        {activeTab === 'testimonials' && ( <div><div className="flex justify-end mb-4"><button onClick={() => openTestimonialModal()} className="elegant-button">{t('addTestimonial')}</button></div><div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Image</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('author')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('quote')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{testimonials.length > 0 ? testimonials.map(testimonial => (<tr key={testimonial.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4"><img src={testimonial.imageUrl} alt={testimonial.author} className="w-10 h-10 object-cover rounded-full"/></td><td className="px-6 py-4 text-sm text-slate-900">{testimonial.author}</td><td className="px-6 py-4 text-sm text-slate-500 truncate max-w-sm">{testimonial.quote}</td><td className="px-6 py-4 flex items-center"><button onClick={() => openTestimonialModal(testimonial)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDeleteTestimonial(testimonial.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={4} className="text-center py-8 text-slate-500">No testimonials found.</td></tr>)}</tbody></table></div></div> )}
+                        {activeTab === 'courses' && ( <div><div className="flex justify-end mb-4"><button onClick={() => openCourseModal()} className="elegant-button">{t('addCourse')}</button></div><div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Image</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('title')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('teacher')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('price')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{courses.length > 0 ? courses.map(course => (<tr key={course.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4"><img src={course.imageUrl} alt={course.title} className="w-16 h-10 object-cover rounded"/></td><td className="px-6 py-4 text-sm text-slate-900">{course.title}</td><td className="px-6 py-4 text-sm text-slate-500">{course.teacher}</td><td className="px-6 py-4 text-sm text-slate-500">{Number(course.price) > 0 ? `$${course.price}`: t('free')}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center"><button onClick={() => openCourseModal(course)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDelete('courses', course.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={5} className="text-center py-8 text-slate-500">No courses found.</td></tr>)}</tbody></table></div></div> )}
+                        {activeTab === 'users' && ( <div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('username')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('email')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('role')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{users.length > 0 ? users.map(user => (<tr key={user.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4 text-sm text-slate-900">{user.username}</td><td className="px-6 py-4 text-sm text-slate-500">{user.email}</td><td className="px-6 py-4 text-sm text-slate-500">{user.role}</td><td className="px-6 py-4 flex items-center"><button onClick={() => openUserModal(user)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDelete('users', user.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={4} className="text-center py-8 text-slate-500">No users found.</td></tr>)}</tbody></table></div> )}
+                        {activeTab === 'news' && ( <div><div className="flex justify-end mb-4"><button onClick={() => openNewsModal()} className="elegant-button">{t('addNews')}</button></div><div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Image</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('title')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('date')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{news.length > 0 ? news.map(article => (<tr key={article.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4"><img src={article.imageUrl} alt={article.title} className="w-16 h-10 object-cover rounded"/></td><td className="px-6 py-4 text-sm text-slate-900">{article.title}</td><td className="px-6 py-4 text-sm text-slate-500">{article.date}</td><td className="px-6 py-4 flex items-center"><button onClick={() => openNewsModal(article)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDelete('news', article.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={4} className="text-center py-8 text-slate-500">No news articles found.</td></tr>)}</tbody></table></div></div> )}
+                        {activeTab === 'testimonials' && ( <div><div className="flex justify-end mb-4"><button onClick={() => openTestimonialModal()} className="elegant-button">{t('addTestimonial')}</button></div><div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Image</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('author')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('quote')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{testimonials.length > 0 ? testimonials.map(testimonial => (<tr key={testimonial.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4"><img src={testimonial.imageUrl} alt={testimonial.author} className="w-10 h-10 object-cover rounded-full"/></td><td className="px-6 py-4 text-sm text-slate-900">{testimonial.author}</td><td className="px-6 py-4 text-sm text-slate-500 truncate max-w-sm">{testimonial.quote}</td><td className="px-6 py-4 flex items-center"><button onClick={() => openTestimonialModal(testimonial)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDelete('testimonials', testimonial.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={4} className="text-center py-8 text-slate-500">No testimonials found.</td></tr>)}</tbody></table></div></div> )}
                         {activeTab === 'hero' && ( 
                             <div className="max-w-2xl mx-auto">
-                                <form onSubmit={(e) => {e.preventDefault(); setHeroSaveStatus('Saved!');}}>
+                                <form onSubmit={handleSaveHero}>
                                     <div className="mb-6">
                                         <h3 className="text-lg font-bold text-slate-800 mb-2">Home Page Hero</h3>
-                                        <div className="mb-4"><label htmlFor="heroTitle" className="block text-sm font-medium text-slate-700">{t('title')}</label><input type="text" id="heroTitle" value={heroContent.title} onChange={e => handleHeroChange('title', e.target.value)} className="mt-1 block w-full elegant-input" /></div>
-                                        <div className="mb-4"><label htmlFor="heroSubtitle" className="block text-sm font-medium text-slate-700">{t('subtitle')}</label><textarea id="heroSubtitle" value={heroContent.subtitle} onChange={e => handleHeroChange('subtitle', e.target.value)} rows={3} className="mt-1 block w-full elegant-input"></textarea></div>
+                                        <div className="mb-4"><label htmlFor="heroTitle" className="block text-sm font-medium text-slate-700">{t('title')}</label><input type="text" id="heroTitle" value={heroContent.title} onChange={e => setHeroContent(p => ({...p, title: e.target.value}))} className="mt-1 block w-full elegant-input" /></div>
+                                        <div className="mb-4"><label htmlFor="heroSubtitle" className="block text-sm font-medium text-slate-700">{t('subtitle')}</label><textarea id="heroSubtitle" value={heroContent.subtitle} onChange={e => setHeroContent(p => ({...p, subtitle: e.target.value}))} rows={3} className="mt-1 block w-full elegant-input"></textarea></div>
                                         <div><label className="block text-sm font-medium text-slate-700">{t('backgroundImage')}</label><div {...heroDropzone.getRootProps()} className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md cursor-pointer ${heroDropzone.isDragActive ? 'border-[--accent] bg-yellow-50' : ''}`}><input {...heroDropzone.getInputProps()} /><div className="space-y-1 text-center">{heroContent.backgroundImageUrl ? <img src={heroContent.backgroundImageUrl} alt="Preview" className="mx-auto h-24 w-auto"/> : <svg className="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>}<p className="text-sm text-slate-600">{t('dropImage')}</p></div></div></div>
                                     </div>
                                     
@@ -217,10 +245,10 @@ const AdminPage: React.FC = () => {
                     </div>
                 </div>
             </main>
-            {isCourseModalOpen && currentCourse && <CourseModal course={currentCourse} onClose={() => setIsCourseModalOpen(false)} onSave={handleSaveCourse} onImageDrop={onCourseImageDrop} setCourse={setCurrentCourse} />}
+            {isCourseModalOpen && currentCourse && <CourseModal course={currentCourse} onClose={() => setIsCourseModalOpen(false)} onSave={handleSaveCourse} onImageDrop={handleCourseImageDrop} setCourse={setCurrentCourse} />}
             {isUserModalOpen && currentUser && <UserModal user={currentUser} onClose={() => setIsUserModalOpen(false)} onSave={handleSaveUser} setUser={setCurrentUser} />}
-            {isNewsModalOpen && currentNews && <NewsModal article={currentNews} onClose={() => setIsNewsModalOpen(false)} onSave={handleSaveNews} onImageDrop={onNewsImageDrop} setArticle={setCurrentNews} />}
-            {isTestimonialModalOpen && currentTestimonial && <TestimonialModal testimonial={currentTestimonial} onClose={() => setIsTestimonialModalOpen(false)} onSave={handleSaveTestimonial} onImageDrop={onTestimonialImageDrop} setTestimonial={setCurrentTestimonial} />}
+            {isNewsModalOpen && currentNews && <NewsModal article={currentNews} onClose={() => setIsNewsModalOpen(false)} onSave={handleSaveNews} onImageDrop={handleNewsImageDrop} setArticle={setCurrentNews} />}
+            {isTestimonialModalOpen && currentTestimonial && <TestimonialModal testimonial={currentTestimonial} onClose={() => setIsTestimonialModalOpen(false)} onSave={handleSaveTestimonial} onImageDrop={handleTestimonialImageDrop} setTestimonial={setCurrentTestimonial} />}
         </div>
     );
 };
@@ -243,16 +271,12 @@ const ContentBlockItem: React.FC<{
     updateBlock(block.id, e.target.value);
   };
   
-  const onBlockImageDrop = React.useCallback((acceptedFiles: File[]) => {
-      const file = acceptedFiles[0];
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if(event.target && typeof event.target.result === 'string') {
-          updateBlock(block.id, event.target.result);
-        }
-      };
-      if(file) reader.readAsDataURL(file);
-    }, [block.id, updateBlock]);
+  const onBlockImageDrop = async (acceptedFiles: File[]) => {
+      if(acceptedFiles.length > 0) {
+          const url = await uploadImage(acceptedFiles[0], 'content_blocks');
+          updateBlock(block.id, url);
+      }
+    };
   const { getRootProps, getInputProps } = useDropzone({ onDrop: onBlockImageDrop, accept: {'image/*':[]} });
 
   return (

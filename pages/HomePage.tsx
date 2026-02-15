@@ -6,12 +6,12 @@ import Footer from '../components/Footer';
 import CourseCard from '../components/CourseCard';
 import PaymentModal from '../components/PaymentModal';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Course, HeroContent, NewsArticle, Testimonial } from '../types';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../contexts/AuthContext';
 import { useCourse } from '../contexts/CourseContext';
-import { mockNews, mockTestimonials } from '../utils/mockData';
+import { db } from '../firebase';
+import { doc, collection, getDoc, getDocs } from 'firebase/firestore';
 
 const NewsCard: React.FC<{ article: NewsArticle }> = ({ article }) => (
     <div className="group h-80 [perspective:1000px]">
@@ -67,13 +67,36 @@ const HomePage: React.FC = () => {
     const { courses, enroll } = useCourse();
     const navigate = useNavigate();
 
-    const [news] = useLocalStorage<NewsArticle[]>('news', mockNews);
-    const [testimonials] = useLocalStorage<Testimonial[]>('testimonials', mockTestimonials);
-    const [heroContent] = useLocalStorage<HeroContent>('heroContent', {
+    const [news, setNews] = React.useState<NewsArticle[]>([]);
+    const [testimonials, setTestimonials] = React.useState<Testimonial[]>([]);
+    const [heroContent, setHeroContent] = React.useState<HeroContent>({
       title: 'Design Your Future.',
       subtitle: 'Discover curated courses in technology and design, crafted to elevate your skills and professional life.',
       backgroundImageUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80',
     });
+
+    React.useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Fetch Hero
+                const heroSnap = await getDoc(doc(db, 'settings', 'hero'));
+                if(heroSnap.exists()) setHeroContent(heroSnap.data() as HeroContent);
+                
+                // Fetch News (limit 2)
+                const newsSnap = await getDocs(collection(db, 'news'));
+                const newsData = newsSnap.docs.map(d => ({id:d.id, ...d.data()} as NewsArticle));
+                setNews(newsData);
+                
+                // Fetch Testimonials
+                const testSnap = await getDocs(collection(db, 'testimonials'));
+                const testData = testSnap.docs.map(d => ({id:d.id, ...d.data()} as Testimonial));
+                setTestimonials(testData);
+            } catch (error) {
+                console.warn("Failed to fetch homepage data (Offline or unconfigured Firebase). Using default/empty content.", error);
+            }
+        };
+        fetchData();
+    }, []);
 
     const [isPaymentModalOpen, setPaymentModalOpen] = React.useState(false);
     const [selectedCourse, setSelectedCourse] = React.useState<Course | null>(null);

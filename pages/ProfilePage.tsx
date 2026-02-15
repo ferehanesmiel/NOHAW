@@ -6,8 +6,10 @@ import Footer from '../components/Footer';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Testimonial } from '../types';
+import { db, storage } from '../firebase';
+import { doc, getDocs, setDoc, deleteDoc, collection } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const ProfilePage: React.FC = () => {
     const { user, updateProfile, changePassword } = useAuth();
@@ -28,7 +30,7 @@ const ProfilePage: React.FC = () => {
     const [isPasswordError, setIsPasswordError] = React.useState(false);
     
     // Testimonial State
-    const [testimonials, setTestimonials] = useLocalStorage<Testimonial[]>('testimonials', []);
+    const [testimonials, setTestimonials] = React.useState<Testimonial[]>([]);
     const [myQuote, setMyQuote] = React.useState('');
     const [myRole, setMyRole] = React.useState('');
     const [existingTestimonialId, setExistingTestimonialId] = React.useState<string | null>(null);
@@ -40,31 +42,44 @@ const ProfilePage: React.FC = () => {
             setEmail(user.email || '');
             setBio(user.bio || '');
             setProfilePicture(user.profilePictureUrl || null);
-
-            const myT = testimonials.find(t => t.author === user.username);
-            if (myT) {
-                setMyQuote(myT.quote);
-                setMyRole(myT.role);
-                setExistingTestimonialId(myT.id);
-            }
         }
-    }, [user, testimonials]);
-    
-    const onDrop = React.useCallback((acceptedFiles: File[]) => {
-        const file = acceptedFiles[0];
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            if (event.target && typeof event.target.result === 'string') {
-                setProfilePicture(event.target.result);
+    }, [user]);
+
+    React.useEffect(() => {
+        const fetchTestimonials = async () => {
+            const querySnapshot = await getDocs(collection(db, 'testimonials'));
+            const list = querySnapshot.docs.map(d => ({id:d.id, ...d.data()} as Testimonial));
+            setTestimonials(list);
+            
+            if(user) {
+                const myT = list.find(t => t.author === user.username);
+                if (myT) {
+                    setMyQuote(myT.quote);
+                    setMyRole(myT.role);
+                    setExistingTestimonialId(myT.id);
+                }
             }
         };
-        reader.readAsDataURL(file);
-    }, []);
+        fetchTestimonials();
+    }, [user]);
+    
+    const onDrop = React.useCallback(async (acceptedFiles: File[]) => {
+        if(acceptedFiles.length === 0) return;
+        const file = acceptedFiles[0];
+        
+        // Upload to Firebase Storage
+        const storageRef = ref(storage, `users/${user?.id}/profile_${Date.now()}`);
+        await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
+        
+        setProfilePicture(url);
+    }, [user]);
+
     const { getRootProps, getInputProps } = useDropzone({ onDrop, accept: {'image/*':[]} });
 
-    const handleDetailsSubmit = (e: React.FormEvent) => {
+    const handleDetailsSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        updateProfile({
+        await updateProfile({
             username,
             bio,
             profilePictureUrl: profilePicture || undefined
@@ -73,7 +88,7 @@ const ProfilePage: React.FC = () => {
         setTimeout(() => setDetailsSuccessMessage(''), 3000);
     };
 
-    const handlePasswordSubmit = (e: React.FormEvent) => {
+    const handlePasswordSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsPasswordError(false);
         setPasswordMessage('');
@@ -84,7 +99,7 @@ const ProfilePage: React.FC = () => {
             return;
         }
 
-        const success = changePassword(currentPassword, newPassword);
+        const success = await changePassword(currentPassword, newPassword);
         if (success) {
             setIsPasswordError(false);
             setPasswordMessage(t('passwordChangedSuccess'));
@@ -97,38 +112,40 @@ const ProfilePage: React.FC = () => {
         }
     };
     
-    const handleTestimonialSubmit = (e: React.FormEvent) => {
+    const handleTestimonialSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user || !myQuote || !myRole) return;
 
         if (existingTestimonialId) {
-            setTestimonials(testimonials.map(t => t.id === existingTestimonialId ? {
-                ...t,
-                quote: myQuote,
+             const updated = {
+                id: existingTestimonialId,
+                author: user.username,
                 role: myRole,
-                imageUrl: user.profilePictureUrl || t.imageUrl,
-            } : t));
+                quote: myQuote,
+                imageUrl: user.profilePictureUrl || 'https://ui-avatars.com/api/?name=' + user.username
+            };
+            await setDoc(doc(db, 'testimonials', existingTestimonialId), updated);
             setTestimonialMessage('Testimonial updated successfully!');
         } else {
+            const id = Date.now().toString();
             const newTestimonial: Testimonial = {
-                id: Date.now().toString(),
+                id,
                 author: user.username,
                 role: myRole,
                 quote: myQuote,
                 imageUrl: user.profilePictureUrl || `https://ui-avatars.com/api/?name=${user.username.replace(' ', '+')}&background=random`
             };
-            const newTestimonials = [...testimonials, newTestimonial];
-            setTestimonials(newTestimonials);
-            setExistingTestimonialId(newTestimonial.id);
+            await setDoc(doc(db, 'testimonials', id), newTestimonial);
+            setExistingTestimonialId(id);
             setTestimonialMessage('Testimonial submitted successfully!');
         }
         setTimeout(() => setTestimonialMessage(''), 3000);
     };
 
-    const handleDeleteTestimonial = () => {
+    const handleDeleteTestimonial = async () => {
         if(!existingTestimonialId || !window.confirm('Are you sure you want to delete your testimonial?')) return;
         
-        setTestimonials(testimonials.filter(t => t.id !== existingTestimonialId));
+        await deleteDoc(doc(db, 'testimonials', existingTestimonialId));
         setMyQuote('');
         setMyRole('');
         setExistingTestimonialId(null);
