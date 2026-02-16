@@ -8,7 +8,7 @@ import { useCourse } from '../contexts/CourseContext';
 import Header from '../components/Header';
 import { EditIcon, DeleteIcon } from '../components/icons';
 import { db } from '../firebase';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch } from 'firebase/firestore';
 import { mockCourses, mockNews, mockTestimonials } from '../utils/mockData';
 import TechNetworkArt from '../components/TechNetworkArt';
 
@@ -84,9 +84,30 @@ const AdminPage: React.FC = () => {
     const handleSaveCourse = async (e: React.FormEvent) => { 
         e.preventDefault(); 
         if (!currentCourse) return; 
+        
         const id = currentCourse.id || Date.now().toString();
-        const courseData = { ...currentCourse, price: Number(currentCourse.price), rating: Number(currentCourse.rating), imageUrl: currentCourse.imageUrl || 'generated', id };
-        try { await setDoc(doc(db, 'courses', id), courseData); setIsCourseModalOpen(false); } catch (error) { console.error(error); alert("Error saving course."); }
+        
+        // Sanitize data to ensure no undefined values are passed to Firestore
+        const courseData = { 
+            title: currentCourse.title || '',
+            description: currentCourse.description || '',
+            category: currentCourse.category || '',
+            teacher: currentCourse.teacher || '',
+            duration: currentCourse.duration || '',
+            rating: Number(currentCourse.rating) || 0, 
+            price: Number(currentCourse.price) || 0, 
+            imageUrl: currentCourse.imageUrl || 'generated', 
+            content: currentCourse.content || [],
+            id 
+        };
+
+        try { 
+            await setDoc(doc(db, 'courses', id), courseData, { merge: true }); 
+            setIsCourseModalOpen(false); 
+        } catch (error) { 
+            console.error(error); 
+            alert("Error saving course. Check console for details."); 
+        }
     };
 
     const handleSaveUser = async (e: React.FormEvent) => { 
@@ -99,19 +120,19 @@ const AdminPage: React.FC = () => {
         e.preventDefault(); 
         if(!currentNews) return; 
         const id = currentNews.id || Date.now().toString();
-        try { await setDoc(doc(db, 'news', id), { ...currentNews, id }); setIsNewsModalOpen(false); } catch (error) { console.error(error); alert("Error saving news article."); }
+        try { await setDoc(doc(db, 'news', id), { ...currentNews, id }, { merge: true }); setIsNewsModalOpen(false); } catch (error) { console.error(error); alert("Error saving news article."); }
     };
 
     const handleSaveTestimonial = async (e: React.FormEvent) => { 
         e.preventDefault(); 
         if(!currentTestimonial) return; 
         const id = currentTestimonial.id || Date.now().toString();
-        try { await setDoc(doc(db, 'testimonials', id), { ...currentTestimonial, id }); setIsTestimonialModalOpen(false); } catch (error) { console.error(error); alert("Error saving testimonial."); }
+        try { await setDoc(doc(db, 'testimonials', id), { ...currentTestimonial, id }, { merge: true }); setIsTestimonialModalOpen(false); } catch (error) { console.error(error); alert("Error saving testimonial."); }
     };
 
     const handleSaveHero = async (e: React.FormEvent) => {
         e.preventDefault();
-        try { await setDoc(doc(db, 'settings', 'hero'), heroContent); setHeroSaveStatus('Saved!'); setTimeout(() => setHeroSaveStatus(''), 2000); } catch (error) { console.error(error); setHeroSaveStatus('Error!'); }
+        try { await setDoc(doc(db, 'settings', 'hero'), heroContent, { merge: true }); setHeroSaveStatus('Saved!'); setTimeout(() => setHeroSaveStatus(''), 2000); } catch (error) { console.error(error); setHeroSaveStatus('Error!'); }
     };
     
     const handleDelete = async (collectionName: string, id: string) => { 
@@ -121,20 +142,20 @@ const AdminPage: React.FC = () => {
     };
 
     const handleSeedDatabase = async () => {
-        if (!window.confirm("Seed database?")) return;
+        if (!window.confirm("Seed database? This will overwrite existing data.")) return;
         setIsSeeding(true);
         const batch = writeBatch(db);
         mockCourses.forEach(c => batch.set(doc(db, 'courses', c.id), c));
         mockNews.forEach(n => batch.set(doc(db, 'news', n.id), n));
         mockTestimonials.forEach(t => batch.set(doc(db, 'testimonials', t.id), t));
-        batch.set(doc(db, 'settings', 'hero'), { title: 'Design Your Future.', subtitle: 'Discover...', backgroundImageUrl: '', signInImageUrl: '', signUpImageUrl: '' }, { merge: true });
-        try { await batch.commit(); alert("Seeded!"); } catch (error) { console.error(error); alert("Error seeding."); } finally { setIsSeeding(false); }
+        batch.set(doc(db, 'settings', 'hero'), { title: 'Design Your Future.', subtitle: 'Discover curated courses...', backgroundImageUrl: '', signInImageUrl: '', signUpImageUrl: '' }, { merge: true });
+        try { await batch.commit(); alert("Seeded successfully!"); } catch (error) { console.error(error); alert("Error seeding database."); } finally { setIsSeeding(false); }
     };
     
-    const openCourseModal = (c?: Course) => { setCurrentCourse(c || { title: '', description: '', category: '', imageUrl: 'generated', teacher: '', duration: '', rating: 0, price: 0, content: [] }); setIsCourseModalOpen(true); };
-    const openUserModal = (u: User) => { setCurrentUser(u); setIsUserModalOpen(true); };
-    const openNewsModal = (n?: NewsArticle) => { setCurrentNews(n || { title: '', content: '', imageUrl: '', date: new Date().toISOString().split('T')[0] }); setIsNewsModalOpen(true); };
-    const openTestimonialModal = (t?: Testimonial) => { setCurrentTestimonial(t || { author: '', role: '', quote: '', imageUrl: '' }); setIsTestimonialModalOpen(true); };
+    const openCourseModal = (c?: Course) => { setCurrentCourse(c ? {...c} : { title: '', description: '', category: '', imageUrl: 'generated', teacher: '', duration: '', rating: 0, price: 0, content: [] }); setIsCourseModalOpen(true); };
+    const openUserModal = (u: User) => { setCurrentUser({...u}); setIsUserModalOpen(true); };
+    const openNewsModal = (n?: NewsArticle) => { setCurrentNews(n ? {...n} : { title: '', content: '', imageUrl: '', date: new Date().toISOString().split('T')[0] }); setIsNewsModalOpen(true); };
+    const openTestimonialModal = (t?: Testimonial) => { setCurrentTestimonial(t ? {...t} : { author: '', role: '', quote: '', imageUrl: '' }); setIsTestimonialModalOpen(true); };
     
     const TabButton: React.FC<{tab: AdminTab, label: string}> = ({ tab, label }) => ( <button onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-200'}`}>{label}</button> );
 
@@ -149,7 +170,7 @@ const AdminPage: React.FC = () => {
                             Live DB
                         </span>
                         {(courses.length === 0 && news.length === 0 && testimonials.length === 0) && (
-                            <button onClick={handleSeedDatabase} disabled={isSeeding} className="bg-emerald-600 text-white text-xs px-3 py-1 rounded hover:bg-emerald-700 disabled:opacity-50">{isSeeding ? "Seeding..." : "Seed"}</button>
+                            <button onClick={handleSeedDatabase} disabled={isSeeding} className="bg-emerald-600 text-white text-xs px-3 py-1 rounded hover:bg-emerald-700 disabled:opacity-50">{isSeeding ? "Seeding..." : "Seed DB"}</button>
                         )}
                     </div>
                 </div>
@@ -249,13 +270,92 @@ const AdminPage: React.FC = () => {
     );
 };
 
-// ... ContentBlockItem, CourseModal, UserModal, NewsModal, TestimonialModal remain mostly unchanged but should use responsive inputs if needed (already w-full) ...
+const ContentBlockItem: React.FC<{ block: ContentBlock; index: number; updateBlock: (id: string, value: string) => void; deleteBlock: (id: string) => void; }> = ({ block, index, updateBlock, deleteBlock }) => { 
+    const { t } = useLanguage(); 
+    const handleValueChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { updateBlock(block.id, e.target.value); }; 
+    return ( 
+        <Draggable draggableId={block.id} index={index}> 
+            {(provided) => ( 
+                <div ref={provided.innerRef} {...provided.draggableProps} className="p-4 mb-2 bg-slate-50 rounded-lg border border-slate-200"> 
+                    <div className="flex items-center justify-between mb-2"> 
+                        <div className="flex items-center"> 
+                            <span {...provided.dragHandleProps} className="cursor-grab text-slate-400 mr-2">☰</span> 
+                            <span className="font-medium text-slate-700 capitalize">{block.type} Block</span> 
+                        </div> 
+                        <button type="button" onClick={() => deleteBlock(block.id)} className="text-red-500 hover:text-red-700 text-sm">{t('delete')}</button> 
+                    </div> 
+                    {block.type === 'text' && ( <textarea value={block.value || ''} onChange={handleValueChange} rows={4} className="elegant-input w-full" placeholder="Enter text content..."/> )} 
+                    {block.type === 'video' && ( <input type="text" value={block.value || ''} onChange={handleValueChange} className="elegant-input w-full" placeholder="Enter video URL (e.g., YouTube embed link)"/> )} 
+                    {block.type === 'image' && ( <div className="space-y-2"> <input type="text" value={block.value || ''} onChange={handleValueChange} className="elegant-input w-full" placeholder="Enter image URL (https://...)"/> {block.value && <img src={block.value} alt="Preview" className="h-32 object-contain rounded border border-slate-200"/>} </div> )} 
+                </div> 
+            )} 
+        </Draggable> 
+    ); 
+};
 
-// Re-including helper components to ensure full file validity
-const ContentBlockItem: React.FC<{ block: ContentBlock; index: number; updateBlock: (id: string, value: string) => void; deleteBlock: (id: string) => void; }> = ({ block, index, updateBlock, deleteBlock }) => { const { t } = useLanguage(); const handleValueChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { updateBlock(block.id, e.target.value); }; return ( <Draggable draggableId={block.id} index={index}> {(provided) => ( <div ref={provided.innerRef} {...provided.draggableProps} className="p-4 mb-2 bg-slate-50 rounded-lg border border-slate-200"> <div className="flex items-center justify-between mb-2"> <div className="flex items-center"> <span {...provided.dragHandleProps} className="cursor-grab text-slate-400 mr-2">☰</span> <span className="font-medium text-slate-700 capitalize">{block.type} Block</span> </div> <button type="button" onClick={() => deleteBlock(block.id)} className="text-red-500 hover:text-red-700 text-sm">{t('delete')}</button> </div> {block.type === 'text' && ( <textarea value={block.value} onChange={handleValueChange} rows={4} className="elegant-input w-full" placeholder="Enter text content..."/> )} {block.type === 'video' && ( <input type="text" value={block.value} onChange={handleValueChange} className="elegant-input w-full" placeholder="Enter video URL (e.g., YouTube embed link)"/> )} {block.type === 'image' && ( <div className="space-y-2"> <input type="text" value={block.value} onChange={handleValueChange} className="elegant-input w-full" placeholder="Enter image URL (https://...)"/> {block.value && <img src={block.value} alt="Preview" className="h-32 object-contain rounded border border-slate-200"/>} </div> )} </div> )} </Draggable> ); };
-const CourseModal: React.FC<{course: Partial<Course>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, setCourse: React.Dispatch<React.SetStateAction<Partial<Course> | null>>}> = ({ course, onClose, onSave, setCourse }) => { const { t } = useLanguage(); const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { const { name, value, type } = e.target; setCourse(prev => { if (!prev) return null; return { ...prev, [name]: type === 'number' ? parseFloat(value) || 0 : value }; }); }; const contentBlocks = course.content || []; const addBlock = (type: 'text' | 'image' | 'video') => { const newBlock: ContentBlock = { id: `block-${Date.now()}`, type, value: '' }; setCourse(prev => prev ? ({ ...prev, content: [...(prev.content || []), newBlock] }) : null); }; const updateBlock = (id: string, value: string) => { setCourse(prev => prev ? ({ ...prev, content: (prev.content || []).map(b => b.id === id ? { ...b, value } : b) }) : null); }; const deleteBlock = (id: string) => { setCourse(prev => prev ? ({ ...prev, content: (prev.content || []).filter(b => b.id !== id) }) : null); }; const onDragEnd = (result: DropResult) => { if (!result.destination) return; const items = Array.from(contentBlocks); const [reorderedItem] = items.splice(result.source.index, 1); items.splice(result.destination.index, 0, reorderedItem); setCourse(prev => prev ? ({...prev, content: items}) : null); }; return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800">{course.id ? t('editCourse') : t('addCourse')}</h2><form onSubmit={onSave}><div className="space-y-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('title')}</label><input name="title" value={course.title} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('description')}</label><textarea name="description" value={course.description} onChange={handleChange} className="elegant-input"/></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('category')}</label><input name="category" value={course.category} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('teacher')}</label><input name="teacher" value={course.teacher} onChange={handleChange} className="elegant-input"/></div></div><div className="grid grid-cols-3 gap-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('duration')}</label><input name="duration" value={course.duration} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('rating')}</label><input name="rating" type="number" step="0.1" value={course.rating} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('price')}</label><input name="price" type="number" value={course.price} onChange={handleChange} className="elegant-input"/></div></div></div><div className="mt-6 pt-4 border-t border-slate-200"><h3 className="text-lg font-medium text-slate-800 mb-2">{t('contentBlocks')}</h3><DragDropContext onDragEnd={onDragEnd}><StrictModeDroppable droppableId="content-blocks">{(provided) => (<div {...provided.droppableProps} ref={provided.innerRef}>{contentBlocks.length > 0 ? contentBlocks.map((block, index) => (<ContentBlockItem key={block.id} block={block} index={index} updateBlock={updateBlock} deleteBlock={deleteBlock} />)) : <p className="text-sm text-slate-500 text-center py-4">No content yet. Add a block to get started.</p>}{provided.placeholder}</div>)}</StrictModeDroppable></DragDropContext><div className="flex items-center space-x-2 mt-4"><button type="button" onClick={() => addBlock('text')} className="elegant-button-outline text-sm">{t('addTextBlock')}</button><button type="button" onClick={() => addBlock('image')} className="elegant-button-outline text-sm">{t('addImageBlock')}</button><button type="button" onClick={() => addBlock('video')} className="elegant-button-outline text-sm">{t('addVideoBlock')}</button></div></div><div className="flex justify-end space-x-4 pt-6"><button type="button" onClick={onClose} className="elegant-button-outline">{t('cancel')}</button><button type="submit" className="elegant-button">{t('save')}</button></div></form></div></div>) }
-const UserModal: React.FC<{user: Partial<User>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, setUser: (u: any)=>void}> = ({ user, onClose, onSave, setUser }) => { const { t } = useLanguage(); const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setUser((prev: User) => ({...prev, [e.target.name]: e.target.value})); return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-md"><h2 className="text-2xl font-bold mb-6 text-slate-800">{t('editUser')}</h2><form onSubmit={onSave} className="space-y-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('username')}</label><input name="username" value={user.username} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('email')}</label><input value={user.email} className="elegant-input bg-slate-200" readOnly/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('role')}</label><select name="role" value={user.role} onChange={handleChange} className="elegant-input"><option value={UserRole.USER}>USER</option><option value={UserRole.ADMIN}>ADMIN</option></select></div><div className="flex justify-end space-x-4 pt-4"><button type="button" onClick={onClose} className="elegant-button-outline">{t('cancel')}</button><button type="submit" className="elegant-button">{t('save')}</button></div></form></div></div>) }
-const NewsModal: React.FC<{article: Partial<NewsArticle>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, setArticle: (a: any)=>void}> = ({ article, onClose, onSave, setArticle }) => { const { t } = useLanguage(); const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setArticle((prev: NewsArticle) => ({...prev, [e.target.name]: e.target.value})); return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800">{article.id ? t('editNews') : t('addNews')}</h2><form onSubmit={onSave} className="space-y-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('title')}</label><input name="title" value={article.title} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('content')}</label><textarea name="content" value={article.content} onChange={handleChange} rows={5} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('date')}</label><input name="date" type="date" value={article.date} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('imageUrl')}</label><input name="imageUrl" value={article.imageUrl} onChange={handleChange} className="elegant-input" placeholder="https://..."/>{article.imageUrl && <img src={article.imageUrl} alt="Preview" className="mt-2 h-20 object-cover rounded"/>}</div><div className="flex justify-end space-x-4 pt-4"><button type="button" onClick={onClose} className="elegant-button-outline">{t('cancel')}</button><button type="submit" className="elegant-button">{t('save')}</button></div></form></div></div>) }
-const TestimonialModal: React.FC<{testimonial: Partial<Testimonial>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, setTestimonial: (t: any)=>void}> = ({ testimonial, onClose, onSave, setTestimonial }) => { const { t } = useLanguage(); const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setTestimonial((prev: Testimonial) => ({...prev, [e.target.name]: e.target.value})); return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800">{testimonial.id ? t('editTestimonial') : t('addTestimonial')}</h2><form onSubmit={onSave} className="space-y-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('author')}</label><input name="author" value={testimonial.author} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('role')}</label><input name="role" value={testimonial.role} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('quote')}</label><textarea name="quote" value={testimonial.quote} onChange={handleChange} rows={4} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('imageUrl')}</label><input name="imageUrl" value={testimonial.imageUrl} onChange={handleChange} className="elegant-input" placeholder="https://..."/>{testimonial.imageUrl && <img src={testimonial.imageUrl} alt="Preview" className="mt-2 h-20 object-cover rounded"/>}</div><div className="flex justify-end space-x-4 pt-4"><button type="button" onClick={onClose} className="elegant-button-outline">{t('cancel')}</button><button type="submit" className="elegant-button">{t('save')}</button></div></form></div></div>) }
+const CourseModal: React.FC<{course: Partial<Course>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, setCourse: React.Dispatch<React.SetStateAction<Partial<Course> | null>>}> = ({ course, onClose, onSave, setCourse }) => { 
+    const { t } = useLanguage(); 
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { 
+        const { name, value, type } = e.target; 
+        setCourse(prev => { 
+            if (!prev) return null; 
+            return { ...prev, [name]: type === 'number' ? parseFloat(value) || 0 : value }; 
+        }); 
+    }; 
+    const contentBlocks = course.content || []; 
+    const addBlock = (type: 'text' | 'image' | 'video') => { const newBlock: ContentBlock = { id: `block-${Date.now()}`, type, value: '' }; setCourse(prev => prev ? ({ ...prev, content: [...(prev.content || []), newBlock] }) : null); }; 
+    const updateBlock = (id: string, value: string) => { setCourse(prev => prev ? ({ ...prev, content: (prev.content || []).map(b => b.id === id ? { ...b, value } : b) }) : null); }; 
+    const deleteBlock = (id: string) => { setCourse(prev => prev ? ({ ...prev, content: (prev.content || []).filter(b => b.id !== id) }) : null); }; 
+    const onDragEnd = (result: DropResult) => { if (!result.destination) return; const items = Array.from(contentBlocks); const [reorderedItem] = items.splice(result.source.index, 1); items.splice(result.destination.index, 0, reorderedItem); setCourse(prev => prev ? ({...prev, content: items}) : null); }; 
+    
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <h2 className="text-2xl font-bold mb-6 text-slate-800">{course.id ? t('editCourse') : t('addCourse')}</h2>
+                <form onSubmit={onSave}>
+                    <div className="space-y-4">
+                        <div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('title')}</label><input name="title" value={course.title || ''} onChange={handleChange} className="elegant-input"/></div>
+                        <div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('description')}</label><textarea name="description" value={course.description || ''} onChange={handleChange} className="elegant-input"/></div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('category')}</label><input name="category" value={course.category || ''} onChange={handleChange} className="elegant-input"/></div>
+                            <div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('teacher')}</label><input name="teacher" value={course.teacher || ''} onChange={handleChange} className="elegant-input"/></div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('duration')}</label><input name="duration" value={course.duration || ''} onChange={handleChange} className="elegant-input"/></div>
+                            <div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('rating')}</label><input name="rating" type="number" step="0.1" value={course.rating || 0} onChange={handleChange} className="elegant-input"/></div>
+                            <div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('price')}</label><input name="price" type="number" value={course.price || 0} onChange={handleChange} className="elegant-input"/></div>
+                        </div>
+                    </div>
+                    <div className="mt-6 pt-4 border-t border-slate-200">
+                        <h3 className="text-lg font-medium text-slate-800 mb-2">{t('contentBlocks')}</h3>
+                        <DragDropContext onDragEnd={onDragEnd}>
+                            <StrictModeDroppable droppableId="content-blocks">
+                                {(provided) => (
+                                    <div {...provided.droppableProps} ref={provided.innerRef}>
+                                        {contentBlocks.length > 0 ? contentBlocks.map((block, index) => (<ContentBlockItem key={block.id} block={block} index={index} updateBlock={updateBlock} deleteBlock={deleteBlock} />)) : <p className="text-sm text-slate-500 text-center py-4">No content yet. Add a block to get started.</p>}
+                                        {provided.placeholder}
+                                    </div>
+                                )}
+                            </StrictModeDroppable>
+                        </DragDropContext>
+                        <div className="flex items-center space-x-2 mt-4">
+                            <button type="button" onClick={() => addBlock('text')} className="elegant-button-outline text-sm">{t('addTextBlock')}</button>
+                            <button type="button" onClick={() => addBlock('image')} className="elegant-button-outline text-sm">{t('addImageBlock')}</button>
+                            <button type="button" onClick={() => addBlock('video')} className="elegant-button-outline text-sm">{t('addVideoBlock')}</button>
+                        </div>
+                    </div>
+                    <div className="flex justify-end space-x-4 pt-6">
+                        <button type="button" onClick={onClose} className="elegant-button-outline">{t('cancel')}</button>
+                        <button type="submit" className="elegant-button">{t('save')}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const UserModal: React.FC<{user: Partial<User>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, setUser: (u: any)=>void}> = ({ user, onClose, onSave, setUser }) => { const { t } = useLanguage(); const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setUser((prev: User) => ({...prev, [e.target.name]: e.target.value})); return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-md"><h2 className="text-2xl font-bold mb-6 text-slate-800">{t('editUser')}</h2><form onSubmit={onSave} className="space-y-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('username')}</label><input name="username" value={user.username || ''} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('email')}</label><input value={user.email || ''} className="elegant-input bg-slate-200" readOnly/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('role')}</label><select name="role" value={user.role || UserRole.USER} onChange={handleChange} className="elegant-input"><option value={UserRole.USER}>USER</option><option value={UserRole.ADMIN}>ADMIN</option></select></div><div className="flex justify-end space-x-4 pt-4"><button type="button" onClick={onClose} className="elegant-button-outline">{t('cancel')}</button><button type="submit" className="elegant-button">{t('save')}</button></div></form></div></div>) }
+const NewsModal: React.FC<{article: Partial<NewsArticle>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, setArticle: (a: any)=>void}> = ({ article, onClose, onSave, setArticle }) => { const { t } = useLanguage(); const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setArticle((prev: NewsArticle) => ({...prev, [e.target.name]: e.target.value})); return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800">{article.id ? t('editNews') : t('addNews')}</h2><form onSubmit={onSave} className="space-y-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('title')}</label><input name="title" value={article.title || ''} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('content')}</label><textarea name="content" value={article.content || ''} onChange={handleChange} rows={5} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('date')}</label><input name="date" type="date" value={article.date || ''} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('imageUrl')}</label><input name="imageUrl" value={article.imageUrl || ''} onChange={handleChange} className="elegant-input" placeholder="https://..."/>{article.imageUrl && <img src={article.imageUrl} alt="Preview" className="mt-2 h-20 object-cover rounded"/>}</div><div className="flex justify-end space-x-4 pt-4"><button type="button" onClick={onClose} className="elegant-button-outline">{t('cancel')}</button><button type="submit" className="elegant-button">{t('save')}</button></div></form></div></div>) }
+const TestimonialModal: React.FC<{testimonial: Partial<Testimonial>, onClose: ()=>void, onSave: (e: React.FormEvent)=>void, setTestimonial: (t: any)=>void}> = ({ testimonial, onClose, onSave, setTestimonial }) => { const { t } = useLanguage(); const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setTestimonial((prev: Testimonial) => ({...prev, [e.target.name]: e.target.value})); return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800">{testimonial.id ? t('editTestimonial') : t('addTestimonial')}</h2><form onSubmit={onSave} className="space-y-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('author')}</label><input name="author" value={testimonial.author || ''} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('role')}</label><input name="role" value={testimonial.role || ''} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('quote')}</label><textarea name="quote" value={testimonial.quote || ''} onChange={handleChange} rows={4} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('imageUrl')}</label><input name="imageUrl" value={testimonial.imageUrl || ''} onChange={handleChange} className="elegant-input" placeholder="https://..."/>{testimonial.imageUrl && <img src={testimonial.imageUrl} alt="Preview" className="mt-2 h-20 object-cover rounded"/>}</div><div className="flex justify-end space-x-4 pt-4"><button type="button" onClick={onClose} className="elegant-button-outline">{t('cancel')}</button><button type="submit" className="elegant-button">{t('save')}</button></div></form></div></div>) }
 
 export default AdminPage;

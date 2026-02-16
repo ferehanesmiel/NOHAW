@@ -18,7 +18,15 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-export const analytics = getAnalytics(app);
+
+// Initialize Analytics conditionally to avoid "s is not a function" errors if it fails to load or isn't supported
+let analytics = null;
+try {
+    analytics = getAnalytics(app);
+} catch (e) {
+    console.warn("Firebase Analytics failed to initialize:", e);
+}
+export { analytics };
 
 // Initialize Firestore with persistent local cache to handle offline scenarios
 export const db = initializeFirestore(app, {

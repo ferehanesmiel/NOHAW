@@ -13,8 +13,15 @@ const TechNetworkArt: React.FC<TechNetworkArtProps> = ({ id = 'default', classNa
   // Safeguard id to ensure it's a string before operations
   const safeId = typeof id === 'string' ? id : String(id || 'default');
   
-  // Simple seedable random function
-  const seed = safeId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  // Simple seedable random function with memoized seed
+  const seed = React.useMemo(() => {
+      try {
+          return safeId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      } catch (e) {
+          return 12345; // Fallback seed
+      }
+  }, [safeId]);
+
   const random = (offset: number) => {
     const x = Math.sin(seed + offset) * 10000;
     return x - Math.floor(x);
@@ -42,7 +49,7 @@ const TechNetworkArt: React.FC<TechNetworkArtProps> = ({ id = 'default', classNa
     x: 5 + random(i * 2) * 90, 
     y: 5 + random(i * 2 + 1) * 90,
     r: 1 + random(i) * 2
-  })), [safeId]);
+  })), [seed]);
 
   // Generate connections
   const connections = React.useMemo(() => {
