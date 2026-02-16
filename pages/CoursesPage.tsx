@@ -43,13 +43,13 @@ const CoursesPage: React.FC = () => {
     };
 
     return (
-        <div className="bg-white min-h-screen flex flex-col">
+        <div className="bg-[var(--bg-main)] min-h-screen flex flex-col transition-colors duration-300">
             <Header />
             <main className="flex-grow pt-20"> {/* Offset for fixed header */}
-                <div className="py-12 bg-slate-50">
+                <div className="py-12 bg-[var(--bg-secondary)] transition-colors duration-300">
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center mb-12">
-                            <h1 className="text-4xl font-bold text-slate-800 tracking-tight">{t('allCourses')}</h1>
+                            <h1 className="text-4xl font-bold text-[var(--text-primary)] tracking-tight">{t('allCourses')}</h1>
                         </div>
                         {courses.length > 0 ? (
                             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
@@ -58,7 +58,7 @@ const CoursesPage: React.FC = () => {
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-center py-12 text-slate-500">{t('noCoursesAvailable')}</p>
+                            <p className="text-center py-12 text-[var(--text-secondary)]">{t('noCoursesAvailable')}</p>
                         )}
                     </div>
                 </div>

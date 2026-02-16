@@ -46,13 +46,13 @@ const CourseDetailPage: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-slate-50">
+        <div className="flex flex-col min-h-screen bg-[var(--bg-main)] transition-colors duration-300">
             <Header />
             {/* Increased top padding (pt-36) to prevent Header from covering Progress section */}
             <main className="flex-grow container mx-auto p-4 sm:p-8 pt-32">
                  <div className="max-w-5xl mx-auto">
                     {/* Course Header with Tech Art and Progress */}
-                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-12 border border-slate-200">
+                    <div className="bg-[var(--bg-primary)] rounded-2xl shadow-xl overflow-hidden mb-12 border border-[var(--border-color)]">
                         <div className="h-72 w-full relative bg-slate-900">
                             <TechNetworkArt id={course.id} className="w-full h-full" theme="indigo" />
                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent flex items-end">
@@ -67,14 +67,14 @@ const CourseDetailPage: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="px-8 py-6 bg-white relative z-10">
+                        <div className="px-8 py-6 bg-[var(--bg-primary)] relative z-10 transition-colors duration-300">
                             {/* Progress Bar */}
                             <div>
                                 <div className="flex justify-between mb-2">
-                                    <span className="text-sm font-bold text-slate-500 uppercase tracking-wide">Course Progress</span>
+                                    <span className="text-sm font-bold text-[var(--text-secondary)] uppercase tracking-wide">Course Progress</span>
                                     <span className="text-sm font-bold text-[--accent]">{currentProgress}%</span>
                                 </div>
-                                <div className="w-full bg-slate-100 rounded-full h-3 border border-slate-200 overflow-hidden">
+                                <div className="w-full bg-[var(--bg-secondary)] rounded-full h-3 border border-[var(--border-color)] overflow-hidden">
                                     <div 
                                         className="bg-gradient-to-r from-indigo-500 to-violet-500 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(99,102,241,0.5)]" 
                                         style={{ width: `${currentProgress}%` }}
@@ -94,13 +94,13 @@ const CourseDetailPage: React.FC = () => {
                                 style={{ animationDelay: `${index * 100}ms` }}
                             >
                                 {block.type === 'text' && (
-                                    <div className="prose prose-lg max-w-none text-slate-700 leading-relaxed bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                                    <div className="prose prose-lg dark:prose-invert max-w-none text-[var(--text-primary)] leading-relaxed bg-[var(--bg-primary)] p-8 rounded-2xl shadow-sm border border-[var(--border-color)] transition-colors duration-300">
                                         <div className="whitespace-pre-wrap">{block.value}</div>
                                     </div>
                                 )}
                                 
                                 {block.type === 'image' && (
-                                    <div className="rounded-2xl overflow-hidden shadow-lg border border-slate-200">
+                                    <div className="rounded-2xl overflow-hidden shadow-lg border border-[var(--border-color)]">
                                         <img 
                                             src={block.value} 
                                             alt="course content" 
@@ -110,12 +110,7 @@ const CourseDetailPage: React.FC = () => {
                                     </div>
                                 )}
                                 
-                                {/* 
-                                    Updated Video Block: 
-                                    - Removed iframe preview.
-                                    - Styled like a testimonial card (glassy/neon/tech background).
-                                    - Focuses on the "Click Key".
-                                */}
+                                {/* Video Block */}
                                 {block.type === 'video' && (
                                     <div className="relative h-64 w-full rounded-2xl overflow-hidden shadow-xl group border border-blue-500/30">
                                         {/* Background Tech Art */}
@@ -162,7 +157,7 @@ const CourseDetailPage: React.FC = () => {
                         ))}
                     </div>
 
-                    <div className="mt-16 pt-10 border-t border-slate-200 text-center">
+                    <div className="mt-16 pt-10 border-t border-[var(--border-color)] text-center">
                         <button 
                             onClick={handleProgressUpdate} 
                             className={`

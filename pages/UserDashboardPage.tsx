@@ -43,34 +43,34 @@ const UserDashboardPage: React.FC = () => {
 
     const CourseTable: React.FC<{title: string, courses: Course[], isEnrolledTable?: boolean}> = ({ title, courses, isEnrolledTable }) => (
         <div className="mb-12">
-            <h2 className="text-2xl font-bold text-slate-800 mb-4">{title}</h2>
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">{title}</h2>
+            <div className="bg-[var(--bg-primary)] rounded-lg shadow-md overflow-hidden border border-[var(--border-color)]">
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200">
-                        <thead className="bg-slate-50">
+                    <table className="min-w-full divide-y divide-[var(--border-color)]">
+                        <thead className="bg-[var(--bg-secondary)]">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('title')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">{t('title')}</th>
                                 {isEnrolledTable ? (
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('progress')}</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">{t('progress')}</th>
                                 ) : (
                                     <>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('teacher')}</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('price')}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">{t('teacher')}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">{t('price')}</th>
                                     </>
                                 )}
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"></th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider"></th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-slate-200">
+                        <tbody className="bg-[var(--bg-primary)] divide-y divide-[var(--border-color)]">
                             {courses.map(course => (
-                                <tr key={course.id}>
-                                    <td className="px-6 py-4 font-medium text-slate-900">{course.title}</td>
+                                <tr key={course.id} className="hover:bg-[var(--bg-secondary)] transition-colors">
+                                    <td className="px-6 py-4 font-medium text-[var(--text-primary)]">{course.title}</td>
                                     {isEnrolledTable ? (
-                                        <td className="px-6 py-4"><div className="w-full bg-slate-200 rounded-full h-2.5"><div className="bg-[--accent] h-2.5 rounded-full" style={{width: `${progress[course.id] || 0}%`}}></div></div></td>
+                                        <td className="px-6 py-4"><div className="w-full bg-[var(--bg-secondary)] rounded-full h-2.5"><div className="bg-[--accent] h-2.5 rounded-full" style={{width: `${progress[course.id] || 0}%`}}></div></div></td>
                                     ) : (
                                         <>
-                                            <td className="px-6 py-4 text-slate-600">{course.teacher}</td>
-                                            <td className="px-6 py-4 font-semibold text-slate-800">{course.price > 0 ? `$${course.price}` : t('free')}</td>
+                                            <td className="px-6 py-4 text-[var(--text-secondary)]">{course.teacher}</td>
+                                            <td className="px-6 py-4 font-semibold text-[var(--text-primary)]">{course.price > 0 ? `$${course.price}` : t('free')}</td>
                                         </>
                                     )}
                                     <td className="px-6 py-4 text-right">
@@ -90,11 +90,11 @@ const UserDashboardPage: React.FC = () => {
     );
 
     return (
-        <div className="flex flex-col min-h-screen bg-slate-50">
+        <div className="flex flex-col min-h-screen bg-[var(--bg-main)] transition-colors duration-300">
             <Header />
             <main className="flex-grow container mx-auto p-4 sm:p-8 pt-28">
-                <h1 className="text-3xl font-bold text-slate-800 mb-2">Welcome back, {user?.username}!</h1>
-                <p className="text-slate-600 mb-8">Ready to continue your learning journey?</p>
+                <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">Welcome back, {user?.username}!</h1>
+                <p className="text-[var(--text-secondary)] mb-8">Ready to continue your learning journey?</p>
 
                 {myCourses.length > 0 && <CourseTable title={t('myCourses')} courses={myCourses} isEnrolledTable />}
                 {premiumCourses.length > 0 && <CourseTable title={t('premiumCourses')} courses={premiumCourses} />}

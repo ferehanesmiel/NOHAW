@@ -16,7 +16,7 @@ import TechNetworkArt from '../components/TechNetworkArt';
 
 const NewsDetailModal: React.FC<{ article: NewsArticle; onClose: () => void }> = ({ article, onClose }) => (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
-        <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative animate-scale-up border border-slate-100" onClick={e => e.stopPropagation()}>
+        <div className="bg-[var(--bg-primary)] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative animate-scale-up border border-[var(--border-color)]" onClick={e => e.stopPropagation()}>
              {/* Header Image */}
             <div className="h-64 relative overflow-hidden bg-slate-900">
                 {article.imageUrl && !article.imageUrl.includes('generated') ? (
@@ -40,12 +40,12 @@ const NewsDetailModal: React.FC<{ article: NewsArticle; onClose: () => void }> =
             </div>
             
             <div className="p-8">
-                <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed">
+                <div className="prose prose-slate dark:prose-invert max-w-none text-[var(--text-secondary)] leading-relaxed">
                     <p className="whitespace-pre-wrap">{article.content}</p>
                 </div>
                 
-                 <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
-                    <button onClick={onClose} className="px-6 py-2 border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors font-medium">
+                 <div className="mt-8 pt-6 border-t border-[var(--border-color)] flex justify-end">
+                    <button onClick={onClose} className="px-6 py-2 border border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] rounded-lg transition-colors font-medium">
                         Close
                     </button>
                 </div>
@@ -55,7 +55,7 @@ const NewsDetailModal: React.FC<{ article: NewsArticle; onClose: () => void }> =
 );
 
 const NewsCard: React.FC<{ article: NewsArticle; onClick: () => void }> = ({ article, onClick }) => (
-    <div className="group flex flex-col h-full bg-white rounded-2xl overflow-hidden shadow-lg border border-slate-100 hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1" onClick={onClick}>
+    <div className="group flex flex-col h-full bg-[var(--bg-primary)] rounded-2xl overflow-hidden shadow-lg border border-[var(--border-color)] hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1" onClick={onClick}>
         {/* Top: Image/Art Container */}
         <div className="h-48 relative overflow-hidden bg-slate-900">
              {/* If we have a real image, show it. If generated/placeholder, show Art */}
@@ -76,16 +76,16 @@ const NewsCard: React.FC<{ article: NewsArticle; onClick: () => void }> = ({ art
              </div>
         </div>
         
-        {/* Bottom: Content (White Background) */}
+        {/* Bottom: Content (Variable Background) */}
         <div className="p-6 flex flex-col flex-grow">
-            <h3 className="font-bold text-xl text-slate-900 mb-3 line-clamp-2 leading-tight group-hover:text-indigo-600 transition-colors">
+            <h3 className="font-bold text-xl text-[var(--text-primary)] mb-3 line-clamp-2 leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                 {article.title}
             </h3>
-            <p className="text-slate-600 text-sm line-clamp-3 mb-4 flex-grow font-medium">
+            <p className="text-[var(--text-secondary)] text-sm line-clamp-3 mb-4 flex-grow font-medium">
                 {article.content}
             </p>
             
-            <div className="mt-auto flex items-center text-indigo-600 font-bold text-xs uppercase tracking-wider group-hover:gap-2 transition-all gap-1">
+            <div className="mt-auto flex items-center text-indigo-600 dark:text-indigo-400 font-bold text-xs uppercase tracking-wider group-hover:gap-2 transition-all gap-1">
                 Read Article <span className="text-lg leading-none">→</span>
             </div>
         </div>
@@ -96,11 +96,11 @@ const TestimonialCard: React.FC<{ testimonial: Testimonial }> = ({ testimonial }
     <div className="group h-72 [perspective:1000px] cursor-pointer">
         <div className="relative h-full w-full rounded-2xl shadow-xl transition-all duration-700 [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]">
             {/* Front Face */}
-            <div className="absolute inset-0 bg-white rounded-2xl overflow-hidden [backface-visibility:hidden] border border-orange-500/20 z-10">
+            <div className="absolute inset-0 bg-[var(--bg-primary)] rounded-2xl overflow-hidden [backface-visibility:hidden] border border-orange-500/20 z-10">
                 <div className="h-32 w-full relative bg-slate-900">
                     <TechNetworkArt id={testimonial.id} theme="neon-orange" className="w-full h-full" />
                     <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2">
-                         <div className="w-20 h-20 rounded-full border-4 border-white bg-slate-800 flex items-center justify-center shadow-md overflow-hidden">
+                         <div className="w-20 h-20 rounded-full border-4 border-[var(--bg-primary)] bg-slate-800 flex items-center justify-center shadow-md overflow-hidden">
                              {testimonial.imageUrl && !testimonial.imageUrl.includes('ui-avatars') ? (
                                 <img src={testimonial.imageUrl} alt={testimonial.author} className="w-full h-full object-cover"/>
                              ) : (
@@ -111,7 +111,7 @@ const TestimonialCard: React.FC<{ testimonial: Testimonial }> = ({ testimonial }
                 </div>
                 
                 <div className="pt-12 pb-6 px-6 text-center">
-                    <p className="font-bold text-xl text-slate-800">{testimonial.author}</p>
+                    <p className="font-bold text-xl text-[var(--text-primary)]">{testimonial.author}</p>
                     <p className="text-sm text-orange-600 font-medium uppercase tracking-wide">{testimonial.role}</p>
                 </div>
             </div>
@@ -205,7 +205,7 @@ const HomePage: React.FC = () => {
     };
 
     return (
-        <div className="bg-[var(--bg-main)]">
+        <div className="bg-[var(--bg-main)] transition-colors duration-300">
             <Header />
             <main className="pt-20">
                 {/* Hero Section with Retro Neon Vibe - FORCED VISIBILITY */}
@@ -244,7 +244,7 @@ const HomePage: React.FC = () => {
                 </div>
 
                 {/* Courses Section */}
-                <div className="py-24 bg-[var(--bg-primary)]">
+                <div className="py-24 bg-[var(--bg-primary)] transition-colors duration-300">
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center mb-16">
                             <h2 className="text-4xl font-bold text-[var(--text-primary)] tracking-tight mb-4">{t('featuredCourses')}</h2>
@@ -255,8 +255,8 @@ const HomePage: React.FC = () => {
                 </div>
 
                 {/* Testimonials Section */}
-                <div className="py-24 bg-[var(--bg-secondary)] relative overflow-hidden">
-                    <div className="absolute inset-0 bg-slate-100 dark:bg-slate-800">
+                <div className="py-24 bg-[var(--bg-secondary)] relative overflow-hidden transition-colors duration-300">
+                    <div className="absolute inset-0 bg-slate-100 dark:bg-slate-800 opacity-50">
                          {/* Subtle Retro Grid Background */}
                          <div className="absolute inset-0 opacity-10" style={{backgroundImage: 'linear-gradient(#ccc 1px, transparent 1px), linear-gradient(90deg, #ccc 1px, transparent 1px)', backgroundSize: '20px 20px'}}></div>
                     </div>
@@ -270,16 +270,16 @@ const HomePage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* News Section - Clean Light Style */}
-                <div className="py-24 bg-slate-50 relative overflow-hidden">
-                     {/* Background Tech Art for Section - Subtle on Light BG */}
+                {/* News Section */}
+                <div className="py-24 bg-[var(--bg-main)] relative overflow-hidden transition-colors duration-300">
+                     {/* Background Tech Art for Section - Subtle */}
                      <div className="absolute inset-0 opacity-10 pointer-events-none">
                          <TechNetworkArt id="news-section-bg" theme="indigo" className="w-full h-full" />
                      </div>
 
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                         <div className="text-center mb-16">
-                            <h2 className="text-4xl font-bold text-slate-900 tracking-tight mb-4">{t('latestNews')}</h2>
+                            <h2 className="text-4xl font-bold text-[var(--text-primary)] tracking-tight mb-4">{t('latestNews')}</h2>
                              <div className="w-24 h-1.5 bg-indigo-500 mx-auto rounded-full"></div>
                         </div>
                         <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-2 max-w-5xl mx-auto">
@@ -292,7 +292,7 @@ const HomePage: React.FC = () => {
                                     />
                                 ))
                             ) : (
-                                <div className="col-span-2 text-center text-slate-500">No news available.</div>
+                                <div className="col-span-2 text-center text-[var(--text-secondary)]">No news available.</div>
                             )}
                         </div>
                     </div>
