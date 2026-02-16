@@ -119,15 +119,47 @@ const AdminPage: React.FC = () => {
     const handleSaveNews = async (e: React.FormEvent) => { 
         e.preventDefault(); 
         if(!currentNews) return; 
+        
         const id = currentNews.id || Date.now().toString();
-        try { await setDoc(doc(db, 'news', id), { ...currentNews, id }, { merge: true }); setIsNewsModalOpen(false); } catch (error) { console.error(error); alert("Error saving news article."); }
+        
+        // Explicitly construct payload to prevent undefined values
+        const newsData = {
+            id,
+            title: currentNews.title || '',
+            content: currentNews.content || '',
+            imageUrl: currentNews.imageUrl || '',
+            date: currentNews.date || new Date().toISOString().split('T')[0]
+        };
+
+        try { 
+            await setDoc(doc(db, 'news', id), newsData, { merge: true }); 
+            setIsNewsModalOpen(false); 
+        } catch (error) { 
+            console.error(error); 
+            alert("Error saving news article."); 
+        }
     };
 
     const handleSaveTestimonial = async (e: React.FormEvent) => { 
         e.preventDefault(); 
         if(!currentTestimonial) return; 
         const id = currentTestimonial.id || Date.now().toString();
-        try { await setDoc(doc(db, 'testimonials', id), { ...currentTestimonial, id }, { merge: true }); setIsTestimonialModalOpen(false); } catch (error) { console.error(error); alert("Error saving testimonial."); }
+        
+        const testimonialData = {
+            id,
+            author: currentTestimonial.author || '',
+            role: currentTestimonial.role || '',
+            quote: currentTestimonial.quote || '',
+            imageUrl: currentTestimonial.imageUrl || ''
+        };
+
+        try { 
+            await setDoc(doc(db, 'testimonials', id), testimonialData, { merge: true }); 
+            setIsTestimonialModalOpen(false); 
+        } catch (error) { 
+            console.error(error); 
+            alert("Error saving testimonial."); 
+        }
     };
 
     const handleSaveHero = async (e: React.FormEvent) => {
@@ -154,7 +186,16 @@ const AdminPage: React.FC = () => {
     
     const openCourseModal = (c?: Course) => { setCurrentCourse(c ? {...c} : { title: '', description: '', category: '', imageUrl: 'generated', teacher: '', duration: '', rating: 0, price: 0, content: [] }); setIsCourseModalOpen(true); };
     const openUserModal = (u: User) => { setCurrentUser({...u}); setIsUserModalOpen(true); };
-    const openNewsModal = (n?: NewsArticle) => { setCurrentNews(n ? {...n} : { title: '', content: '', imageUrl: '', date: new Date().toISOString().split('T')[0] }); setIsNewsModalOpen(true); };
+    
+    // Ensure date is populated when opening modal, even for existing items if they lack it
+    const openNewsModal = (n?: NewsArticle) => { 
+        setCurrentNews(n 
+            ? { ...n, date: n.date || new Date().toISOString().split('T')[0] } 
+            : { title: '', content: '', imageUrl: '', date: new Date().toISOString().split('T')[0] }
+        ); 
+        setIsNewsModalOpen(true); 
+    };
+    
     const openTestimonialModal = (t?: Testimonial) => { setCurrentTestimonial(t ? {...t} : { author: '', role: '', quote: '', imageUrl: '' }); setIsTestimonialModalOpen(true); };
     
     const TabButton: React.FC<{tab: AdminTab, label: string}> = ({ tab, label }) => ( <button onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-200'}`}>{label}</button> );
