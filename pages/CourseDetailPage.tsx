@@ -110,45 +110,49 @@ const CourseDetailPage: React.FC = () => {
                                     </div>
                                 )}
                                 
+                                {/* 
+                                    Updated Video Block: 
+                                    - Removed iframe preview.
+                                    - Styled like a testimonial card (glassy/neon/tech background).
+                                    - Focuses on the "Click Key".
+                                */}
                                 {block.type === 'video' && (
-                                    <div className="relative rounded-2xl overflow-hidden bg-slate-900 shadow-2xl ring-1 ring-white/10 group">
-                                        {/* Background Art for Video Container */}
-                                        <div className="absolute inset-0 opacity-20">
-                                             <TechNetworkArt id={block.id} theme="blue" />
+                                    <div className="relative h-64 w-full rounded-2xl overflow-hidden shadow-xl group border border-blue-500/30">
+                                        {/* Background Tech Art */}
+                                        <div className="absolute inset-0 bg-slate-900">
+                                            <TechNetworkArt id={block.id} theme="blue" className="w-full h-full opacity-80" />
                                         </div>
                                         
-                                        <div className="relative z-10 p-1 bg-gradient-to-b from-white/10 to-transparent">
-                                            <div className="aspect-w-16 aspect-h-9 rounded-xl overflow-hidden bg-black shadow-inner">
-                                                <iframe 
-                                                    src={block.value} 
-                                                    title="Course Video" 
-                                                    frameBorder="0" 
-                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                                                    allowFullScreen 
-                                                    className="w-full h-full"
-                                                ></iframe>
-                                            </div>
-                                        </div>
+                                        {/* Dark overlay */}
+                                        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
 
-                                        <div className="relative z-10 p-4 flex justify-between items-center bg-slate-900/80 backdrop-blur-sm border-t border-white/5">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-                                                <span className="text-xs font-mono text-slate-400 uppercase tracking-widest">Video Module</span>
+                                        {/* Content Centered */}
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center z-10">
+                                            <div className="w-16 h-16 rounded-full bg-blue-600/20 flex items-center justify-center mb-6 ring-2 ring-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.4)] animate-pulse">
+                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
                                             </div>
                                             
-                                            {/* Beautiful "Cyberpunk Key" URL Button */}
+                                            <h3 className="text-2xl font-bold text-white mb-2 drop-shadow-md">Video Module Resource</h3>
+                                            <p className="text-blue-100 mb-8 max-w-lg">
+                                                Access the external video content securely using the access key below.
+                                            </p>
+                                            
+                                            {/* Cyberpunk Click Key */}
                                             <a 
                                                 href={block.value} 
                                                 target="_blank" 
                                                 rel="noopener noreferrer"
-                                                className="group/btn relative inline-flex items-center justify-center px-6 py-2 overflow-hidden font-mono font-medium tracking-tighter text-white bg-slate-800 rounded-lg group hover:bg-slate-700 transition-all duration-300 border border-slate-600 hover:border-blue-400 hover:shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+                                                className="relative inline-flex items-center justify-center px-8 py-3 overflow-hidden font-mono font-bold text-white transition-all duration-300 bg-blue-600 rounded-lg group-hover:bg-blue-500 group-hover:scale-105 shadow-[0_0_20px_rgba(37,99,235,0.6)] ring-1 ring-white/20"
                                             >
-                                                <span className="absolute w-0 h-0 transition-all duration-500 ease-out bg-blue-500 rounded-full group-hover/btn:w-56 group-hover/btn:h-56 opacity-10"></span>
-                                                <span className="relative flex items-center gap-2">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-400 group-hover/btn:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                <span className="absolute w-0 h-0 transition-all duration-500 ease-out bg-white rounded-full group-hover:w-56 group-hover:h-56 opacity-10"></span>
+                                                <span className="relative flex items-center gap-3">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11.536 16.207l-1.414 1.414a1 1 0 01-1.414 0l-1.414-1.414a1 1 0 010-1.414l1.414-1.414a1 1 0 011.414 0l1.414 1.414 3.328-3.328A6 6 0 0115 7z" />
                                                     </svg>
-                                                    OPEN_SOURCE_LINK
+                                                    ACCESS_VIDEO_KEY
                                                 </span>
                                             </a>
                                         </div>
