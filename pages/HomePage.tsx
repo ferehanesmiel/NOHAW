@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCourse } from '../contexts/CourseContext';
 import { db } from '../firebase';
 import { doc, collection, onSnapshot } from 'firebase/firestore';
+import TechNetworkArt from '../components/TechNetworkArt';
 
 const NewsCard: React.FC<{ article: NewsArticle }> = ({ article }) => (
     <div className="group h-80 [perspective:1000px]">
@@ -42,20 +43,38 @@ const NewsCard: React.FC<{ article: NewsArticle }> = ({ article }) => (
 );
 
 const TestimonialCard: React.FC<{ testimonial: Testimonial }> = ({ testimonial }) => (
-    <div className="group h-64 [perspective:1000px]">
-        <div className="relative h-full w-full rounded-2xl shadow-lg transition-all duration-500 [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]">
+    <div className="group h-72 [perspective:1000px]">
+        <div className="relative h-full w-full rounded-2xl shadow-xl transition-all duration-500 [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]">
             {/* Front Face */}
-            <div className="absolute inset-0 bg-[var(--bg-primary)] rounded-2xl p-6 text-center flex flex-col justify-center items-center [backface-visibility:hidden] border border-[var(--border-color)] group-hover:border-[var(--accent)] transition-colors">
-                <div className="p-1 rounded-full bg-gradient-to-r from-[var(--accent)] to-purple-400 mb-4">
-                     <img src={testimonial.imageUrl} alt={testimonial.author} className="w-20 h-20 rounded-full border-4 border-[var(--bg-primary)]" />
+            <div className="absolute inset-0 bg-white rounded-2xl overflow-hidden [backface-visibility:hidden] border border-slate-200">
+                {/* Replaced Image with Tech Art (Amber Theme) */}
+                <div className="h-32 w-full relative bg-slate-900">
+                    <TechNetworkArt id={testimonial.id} theme="amber" className="w-full h-full" />
+                    <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2">
+                         <div className="w-20 h-20 rounded-full border-4 border-white bg-slate-800 flex items-center justify-center shadow-md overflow-hidden">
+                             {/* Use initials if no image, or just show art */}
+                             {testimonial.imageUrl && !testimonial.imageUrl.includes('ui-avatars') ? (
+                                <img src={testimonial.imageUrl} alt={testimonial.author} className="w-full h-full object-cover"/>
+                             ) : (
+                                <span className="text-2xl font-bold text-amber-500">{testimonial.author.charAt(0)}</span>
+                             )}
+                         </div>
+                    </div>
                 </div>
-                <p className="font-bold text-lg text-[var(--text-primary)]">{testimonial.author}</p>
-                <p className="text-sm text-[var(--text-secondary)] font-medium">{testimonial.role}</p>
+                
+                <div className="pt-12 pb-6 px-6 text-center">
+                    <p className="font-bold text-xl text-slate-800">{testimonial.author}</p>
+                    <p className="text-sm text-amber-600 font-medium uppercase tracking-wide">{testimonial.role}</p>
+                </div>
             </div>
+
             {/* Back Face */}
-            <div className="absolute inset-0 bg-[var(--accent)] rounded-2xl p-8 text-center flex flex-col justify-center items-center [backface-visibility:hidden] [transform:rotateY(180deg)] shadow-xl">
-                <p className="text-white text-lg font-medium italic">"{testimonial.quote}"</p>
-                <div className="mt-4 text-white/80 text-sm">- {testimonial.author}</div>
+            <div className="absolute inset-0 bg-amber-500 rounded-2xl p-8 text-center flex flex-col justify-center items-center [backface-visibility:hidden] [transform:rotateY(180deg)] shadow-xl relative overflow-hidden">
+                <TechNetworkArt id={testimonial.id + 'back'} theme="amber" className="absolute inset-0 opacity-20" />
+                <div className="relative z-10">
+                    <svg className="w-8 h-8 text-white/60 mb-4 mx-auto" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H15.017C14.4647 8 14.017 8.44772 14.017 9V11C14.017 11.5523 13.5693 12 13.017 12H12.017V5H22.017V15C22.017 18.3137 19.3307 21 16.017 21H14.017ZM5.0166 21L5.0166 18C5.0166 16.8954 5.91203 16 7.0166 16H10.0166C10.5689 16 11.0166 15.5523 11.0166 15V9C11.0166 8.44772 10.5689 8 10.0166 8H6.0166C5.46432 8 5.0166 8.44772 5.0166 9V11C5.0166 11.5523 4.56889 12 4.0166 12H3.0166V5H13.0166V15C13.0166 18.3137 10.3303 21 7.0166 21H5.0166Z"></path></svg>
+                    <p className="text-white text-lg font-medium italic leading-relaxed">"{testimonial.quote}"</p>
+                </div>
             </div>
         </div>
     </div>
@@ -72,7 +91,7 @@ const HomePage: React.FC = () => {
     const [heroContent, setHeroContent] = React.useState<HeroContent>({
       title: 'Design Your Future.',
       subtitle: 'Discover curated courses in technology and design, crafted to elevate your skills and professional life.',
-      backgroundImageUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80',
+      backgroundImageUrl: '',
     });
 
     React.useEffect(() => {
@@ -129,19 +148,25 @@ const HomePage: React.FC = () => {
         <div className="bg-[var(--bg-main)]">
             <Header />
             <main className="pt-20">
-                {/* Hero Section */}
-                <div className="relative overflow-hidden">
-                     <div className="absolute inset-0 bg-cover bg-center" style={{backgroundImage: `url('${heroContent.backgroundImageUrl}')`}}></div>
-                    <div className="absolute inset-0 hero-overlay"></div>
-                    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-32 sm:py-48 relative text-center z-10">
-                        <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-lg mb-6">{heroContent.title}</h1>
-                        <p className="mt-6 max-w-3xl mx-auto text-xl text-slate-100 font-light leading-relaxed drop-shadow-md">{heroContent.subtitle}</p>
-                        <div className="mt-12 flex justify-center gap-4">
-                            <Link to={isAuthenticated ? "/dashboard" : "/signup"} className="elegant-button text-lg px-8 py-3 shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(255,255,255,0.5)]">
+                {/* Hero Section with Tech Line Art Background (Blue Theme) */}
+                <div className="relative overflow-hidden h-[600px] bg-slate-900">
+                    <TechNetworkArt theme="blue" className="absolute inset-0 w-full h-full" id="hero-main" />
+                    
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/50 to-[var(--bg-main)]"></div>
+
+                    <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center relative z-10 text-center">
+                        <h1 className="text-5xl sm:text-6xl md:text-8xl font-black tracking-tighter text-white mb-6 animate-fade-in-up">
+                            {heroContent.title}
+                        </h1>
+                        <p className="mt-4 max-w-3xl mx-auto text-xl text-blue-100 font-light leading-relaxed drop-shadow-md animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+                            {heroContent.subtitle}
+                        </p>
+                        <div className="mt-10 flex justify-center gap-6 animate-fade-in-up" style={{animationDelay: '0.4s'}}>
+                            <Link to={isAuthenticated ? "/dashboard" : "/signup"} className="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-full font-bold text-lg shadow-[0_0_20px_rgba(37,99,235,0.5)] transition-all hover:scale-105">
                                 {t('getStarted')}
                             </Link>
                             {!isAuthenticated && (
-                                <Link to="/signin" className="px-8 py-3 rounded-lg font-semibold text-white border-2 border-white/30 hover:bg-white/10 transition-all backdrop-blur-sm">
+                                <Link to="/signin" className="px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/20 rounded-full font-bold text-lg transition-all hover:scale-105">
                                     {t('signIn')}
                                 </Link>
                             )}
@@ -163,13 +188,13 @@ const HomePage: React.FC = () => {
                 {/* Testimonials Section */}
                 <div className="py-24 bg-[var(--bg-secondary)] relative overflow-hidden">
                     {/* Decorative Blob */}
-                    <div className="absolute top-0 right-0 -mr-24 -mt-24 w-96 h-96 rounded-full bg-[var(--accent)] opacity-5 blur-3xl"></div>
-                    <div className="absolute bottom-0 left-0 -ml-24 -mb-24 w-96 h-96 rounded-full bg-blue-500 opacity-5 blur-3xl"></div>
+                    <div className="absolute top-0 right-0 -mr-24 -mt-24 w-96 h-96 rounded-full bg-amber-500 opacity-5 blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 -ml-24 -mb-24 w-96 h-96 rounded-full bg-orange-500 opacity-5 blur-3xl"></div>
                     
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                         <div className="text-center mb-16">
                             <h2 className="text-4xl font-bold text-[var(--text-primary)] tracking-tight mb-4">{t('studentTestimonials')}</h2>
-                             <div className="w-24 h-1.5 bg-gradient-to-r from-blue-500 to-[var(--accent)] mx-auto rounded-full"></div>
+                             <div className="w-24 h-1.5 bg-gradient-to-r from-amber-500 to-orange-500 mx-auto rounded-full"></div>
                         </div>
                         <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-2 max-w-5xl mx-auto">{testimonials.slice(0,2).map((testimonial) => (<TestimonialCard key={testimonial.id} testimonial={testimonial} />))}</div>
                     </div>

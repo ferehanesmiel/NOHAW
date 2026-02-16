@@ -6,6 +6,7 @@ import Footer from '../components/Footer';
 import BottomNav from '../components/BottomNav';
 import { useCourse } from '../contexts/CourseContext';
 import { Course } from '../types';
+import TechNetworkArt from '../components/TechNetworkArt';
 
 const CourseDetailPage: React.FC = () => {
     const { courseId } = useParams<{ courseId: string }>();
@@ -44,83 +45,130 @@ const CourseDetailPage: React.FC = () => {
         updateProgress(course.id, newProgress);
     }
 
-    const scrollToBlock = (blockId: string) => {
-        contentRefs.current[blockId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-
     return (
-        <div className="flex flex-col min-h-screen bg-slate-100">
+        <div className="flex flex-col min-h-screen bg-slate-50">
             <Header />
-            <main className="flex-grow container mx-auto p-4 sm:p-8 pt-28">
-                 <div className="flex flex-col lg:flex-row gap-8 max-w-6xl mx-auto">
-                    {/* Sidebar */}
-                    {course.content && course.content.length > 0 && (
-                        <aside className="lg:w-1/4 lg:sticky top-28 self-start">
-                            <div className="bg-white rounded-lg shadow-md p-4">
-                                <h3 className="font-bold text-lg mb-4 text-slate-800">Course Navigation</h3>
-                                <ul className="space-y-2">
-                                    {course.content.map((block, index) => (
-                                    <li key={block.id}>
-                                        <button 
-                                        onClick={() => scrollToBlock(block.id)}
-                                        className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
-                                        >
-                                        {`${index + 1}. ${block.type.charAt(0).toUpperCase() + block.type.slice(1)}`}
-                                        </button>
-                                    </li>
-                                    ))}
-                                </ul>
+            {/* Increased top padding (pt-36) to prevent Header from covering Progress section */}
+            <main className="flex-grow container mx-auto p-4 sm:p-8 pt-32">
+                 <div className="max-w-5xl mx-auto">
+                    {/* Course Header with Tech Art and Progress */}
+                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-12 border border-slate-200">
+                        <div className="h-72 w-full relative bg-slate-900">
+                            <TechNetworkArt id={course.id} className="w-full h-full" theme="indigo" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent flex items-end">
+                                <div className="p-8 sm:p-10 w-full">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-bold uppercase tracking-wider border border-white/10">{course.category}</span>
+                                            <span className="text-slate-300 text-sm font-medium">{course.duration}</span>
+                                        </div>
+                                        <h1 className="text-4xl sm:text-5xl font-extrabold mb-2 text-white tracking-tight drop-shadow-lg">{course.title}</h1>
+                                        <p className="text-slate-300 font-medium text-lg">Instructed by {course.teacher}</p>
+                                </div>
                             </div>
-                        </aside>
-                    )}
+                        </div>
 
-                    {/* Main Content */}
-                    <div className="flex-1">
-                        {/* Course Header */}
-                        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-                            <h1 className="text-4xl font-bold text-slate-800 mb-2">{course.title}</h1>
-                            <p className="text-slate-600">By {course.teacher}</p>
-
+                        <div className="px-8 py-6 bg-white relative z-10">
                             {/* Progress Bar */}
-                            <div className="mt-6">
-                                <div className="flex justify-between mb-1">
-                                    <span className="text-base font-medium text-slate-700">Your Progress</span>
-                                    <span className="text-sm font-medium text-slate-700">{currentProgress}%</span>
+                            <div>
+                                <div className="flex justify-between mb-2">
+                                    <span className="text-sm font-bold text-slate-500 uppercase tracking-wide">Course Progress</span>
+                                    <span className="text-sm font-bold text-[--accent]">{currentProgress}%</span>
                                 </div>
-                                <div className="w-full bg-slate-200 rounded-full h-2.5">
-                                    <div className="bg-[--accent] h-2.5 rounded-full" style={{ width: `${currentProgress}%` }}></div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {/* Course Content */}
-                        <div className="bg-white rounded-lg shadow-md p-8">
-                            <h2 className="text-2xl font-bold text-slate-800 mb-6">Course Content</h2>
-                            <div className="space-y-8 prose max-w-none">
-                                {course.content?.map(block => (
+                                <div className="w-full bg-slate-100 rounded-full h-3 border border-slate-200 overflow-hidden">
                                     <div 
-                                        key={block.id}
-                                        // FIX: The ref callback function must not return a value. The original implementation implicitly returned the result of the assignment.
-                                        ref={el => { contentRefs.current[block.id] = el; }}
-                                        className="p-4 border-l-4 border-slate-200"
-                                    >
-                                        {block.type === 'text' && <p className="text-slate-700">{block.value}</p>}
-                                        {block.type === 'image' && <img src={block.value} alt="course content" className="rounded-md shadow-sm" />}
-                                        {block.type === 'video' && (
-                                            <div className="aspect-w-16 aspect-h-9 not-prose">
-                                                <iframe src={block.value} title="Course Video" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full rounded-md shadow-sm"></iframe>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="mt-8 text-center">
-                                <button onClick={handleProgressUpdate} className="elegant-button">
-                                    {currentProgress < 100 ? 'Mark as Complete' : 'Reset Progress'}
-                                </button>
+                                        className="bg-gradient-to-r from-indigo-500 to-violet-500 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(99,102,241,0.5)]" 
+                                        style={{ width: `${currentProgress}%` }}
+                                    ></div>
+                                </div>
                             </div>
                         </div>
+                    </div>
+                    
+                    {/* Course Content Blocks - Single Column Layout */}
+                    <div className="space-y-16">
+                        {course.content?.map((block, index) => (
+                            <div 
+                                key={block.id}
+                                ref={el => { contentRefs.current[block.id] = el; }}
+                                className="scroll-mt-32 animate-fade-in-up"
+                                style={{ animationDelay: `${index * 100}ms` }}
+                            >
+                                {block.type === 'text' && (
+                                    <div className="prose prose-lg max-w-none text-slate-700 leading-relaxed bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                                        <div className="whitespace-pre-wrap">{block.value}</div>
+                                    </div>
+                                )}
+                                
+                                {block.type === 'image' && (
+                                    <div className="rounded-2xl overflow-hidden shadow-lg border border-slate-200">
+                                        <img 
+                                            src={block.value} 
+                                            alt="course content" 
+                                            className="w-full h-auto object-cover"
+                                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/800x400?text=Content+Image+Unavailable'; }}
+                                        />
+                                    </div>
+                                )}
+                                
+                                {block.type === 'video' && (
+                                    <div className="relative rounded-2xl overflow-hidden bg-slate-900 shadow-2xl ring-1 ring-white/10 group">
+                                        {/* Background Art for Video Container */}
+                                        <div className="absolute inset-0 opacity-20">
+                                             <TechNetworkArt id={block.id} theme="blue" />
+                                        </div>
+                                        
+                                        <div className="relative z-10 p-1 bg-gradient-to-b from-white/10 to-transparent">
+                                            <div className="aspect-w-16 aspect-h-9 rounded-xl overflow-hidden bg-black shadow-inner">
+                                                <iframe 
+                                                    src={block.value} 
+                                                    title="Course Video" 
+                                                    frameBorder="0" 
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                                    allowFullScreen 
+                                                    className="w-full h-full"
+                                                ></iframe>
+                                            </div>
+                                        </div>
+
+                                        <div className="relative z-10 p-4 flex justify-between items-center bg-slate-900/80 backdrop-blur-sm border-t border-white/5">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                                                <span className="text-xs font-mono text-slate-400 uppercase tracking-widest">Video Module</span>
+                                            </div>
+                                            
+                                            {/* Beautiful "Cyberpunk Key" URL Button */}
+                                            <a 
+                                                href={block.value} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="group/btn relative inline-flex items-center justify-center px-6 py-2 overflow-hidden font-mono font-medium tracking-tighter text-white bg-slate-800 rounded-lg group hover:bg-slate-700 transition-all duration-300 border border-slate-600 hover:border-blue-400 hover:shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+                                            >
+                                                <span className="absolute w-0 h-0 transition-all duration-500 ease-out bg-blue-500 rounded-full group-hover/btn:w-56 group-hover/btn:h-56 opacity-10"></span>
+                                                <span className="relative flex items-center gap-2">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-400 group-hover/btn:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                    </svg>
+                                                    OPEN_SOURCE_LINK
+                                                </span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="mt-16 pt-10 border-t border-slate-200 text-center">
+                        <button 
+                            onClick={handleProgressUpdate} 
+                            className={`
+                                relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white transition-all duration-200 
+                                ${currentProgress < 100 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-lg hover:shadow-indigo-500/50' : 'bg-slate-800 hover:bg-slate-700'}
+                                rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
+                            `}
+                        >
+                            {currentProgress < 100 ? 'Complete Lesson' : 'Reset Progress'}
+                        </button>
                     </div>
                  </div>
             </main>

@@ -10,6 +10,7 @@ import { EditIcon, DeleteIcon } from '../components/icons';
 import { db } from '../firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, writeBatch } from 'firebase/firestore';
 import { mockCourses, mockNews, mockTestimonials } from '../utils/mockData';
+import TechNetworkArt from '../components/TechNetworkArt';
 
 type AdminTab = 'courses' | 'users' | 'hero' | 'news' | 'testimonials';
 
@@ -82,19 +83,9 @@ const AdminPage: React.FC = () => {
             (error) => console.error("Error fetching testimonials:", error)
         );
         
-        // Fetch Hero - Realtime
+        // Fetch Hero
         const unsubHero = onSnapshot(doc(db, 'settings', 'hero'), (docSnap) => {
             if(docSnap.exists()) {
-                // Only update if we aren't currently editing (optional, but here simple sync is fine)
-                // Actually, for admin input forms, real-time updates from *other* admins might interfere with typing
-                // but since we usually work alone or want to see saved state, let's just sync it.
-                // However, typing in input updates state. If onSnapshot fires, it might overwrite typing if db changes.
-                // But usually, onSnapshot fires on local write immediately (latency compensation).
-                // Let's stick to syncing only if the user hasn't typed? No, keep it simple: sync.
-                // If it becomes an issue, we can decouple "form state" from "db state".
-                // For now, let's keep it sync to ensure "it works".
-                // To prevent overwriting local edits while typing if no remote change happened, we rely on Firebase's behavior
-                // where local writes trigger snapshot immediately.
                  setHeroContent(docSnap.data() as HeroContent);
             }
         }, (error) => console.error("Error fetching hero content:", error));
@@ -113,6 +104,8 @@ const AdminPage: React.FC = () => {
             ...currentCourse, 
             price: Number(currentCourse.price), 
             rating: Number(currentCourse.rating), 
+            // We ensure imageUrl is set to something, though it's not used in UI anymore
+            imageUrl: currentCourse.imageUrl || 'generated',
             id 
         };
         
@@ -215,9 +208,9 @@ const AdminPage: React.FC = () => {
         const defaultHero: HeroContent = {
              title: 'Design Your Future.',
              subtitle: 'Discover curated courses in technology and design, crafted to elevate your skills and professional life.',
-             backgroundImageUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?ixlib=rb-4.0.3&auto=format&fit=crop&w=1770&q=80',
-             signInImageUrl: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60',
-             signUpImageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60'
+             backgroundImageUrl: '',
+             signInImageUrl: '',
+             signUpImageUrl: ''
         };
         batch.set(heroRef, defaultHero, { merge: true });
 
@@ -232,7 +225,7 @@ const AdminPage: React.FC = () => {
         }
     };
     
-    const openCourseModal = (c?: Course) => { setCurrentCourse(c || { title: '', description: '', category: '', imageUrl: '', teacher: '', duration: '', rating: 0, price: 0, content: [] }); setIsCourseModalOpen(true); };
+    const openCourseModal = (c?: Course) => { setCurrentCourse(c || { title: '', description: '', category: '', imageUrl: 'generated', teacher: '', duration: '', rating: 0, price: 0, content: [] }); setIsCourseModalOpen(true); };
     const openUserModal = (u: User) => { setCurrentUser(u); setIsUserModalOpen(true); };
     const openNewsModal = (n?: NewsArticle) => { setCurrentNews(n || { title: '', content: '', imageUrl: '', date: new Date().toISOString().split('T')[0] }); setIsNewsModalOpen(true); };
     const openTestimonialModal = (t?: Testimonial) => { setCurrentTestimonial(t || { author: '', role: '', quote: '', imageUrl: '' }); setIsTestimonialModalOpen(true); };
@@ -270,7 +263,7 @@ const AdminPage: React.FC = () => {
                         <TabButton tab="hero" label="Hero & Images" />
                     </div>
                     <div className="pt-6">
-                        {activeTab === 'courses' && ( <div><div className="flex justify-end mb-4"><button onClick={() => openCourseModal()} className="elegant-button">{t('addCourse')}</button></div><div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Image</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('title')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('teacher')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('price')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{courses.length > 0 ? courses.map(course => (<tr key={course.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4"><img src={course.imageUrl} alt={course.title} className="w-16 h-10 object-cover rounded"/></td><td className="px-6 py-4 text-sm text-slate-900">{course.title}</td><td className="px-6 py-4 text-sm text-slate-500">{course.teacher}</td><td className="px-6 py-4 text-sm text-slate-500">{Number(course.price) > 0 ? `$${course.price}`: t('free')}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center"><button onClick={() => openCourseModal(course)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDelete('courses', course.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={5} className="text-center py-8 text-slate-500">No courses found.</td></tr>)}</tbody></table></div></div> )}
+                        {activeTab === 'courses' && ( <div><div className="flex justify-end mb-4"><button onClick={() => openCourseModal()} className="elegant-button">{t('addCourse')}</button></div><div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Preview</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('title')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('teacher')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('price')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{courses.length > 0 ? courses.map(course => (<tr key={course.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4"><div className="w-16 h-10 rounded overflow-hidden"><TechNetworkArt id={course.id} /></div></td><td className="px-6 py-4 text-sm text-slate-900">{course.title}</td><td className="px-6 py-4 text-sm text-slate-500">{course.teacher}</td><td className="px-6 py-4 text-sm text-slate-500">{Number(course.price) > 0 ? `$${course.price}`: t('free')}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center"><button onClick={() => openCourseModal(course)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDelete('courses', course.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={5} className="text-center py-8 text-slate-500">No courses found. Add a new one to get started.</td></tr>)}</tbody></table></div></div> )}
                         {activeTab === 'users' && ( <div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('username')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('email')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('role')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{users.length > 0 ? users.map(user => (<tr key={user.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4 text-sm text-slate-900">{user.username}</td><td className="px-6 py-4 text-sm text-slate-500">{user.email}</td><td className="px-6 py-4 text-sm text-slate-500">{user.role}</td><td className="px-6 py-4 flex items-center"><button onClick={() => openUserModal(user)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDelete('users', user.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={4} className="text-center py-8 text-slate-500">No users found.</td></tr>)}</tbody></table></div> )}
                         {activeTab === 'news' && ( <div><div className="flex justify-end mb-4"><button onClick={() => openNewsModal()} className="elegant-button">{t('addNews')}</button></div><div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Image</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('title')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('date')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{news.length > 0 ? news.map(article => (<tr key={article.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4"><img src={article.imageUrl} alt={article.title} className="w-16 h-10 object-cover rounded"/></td><td className="px-6 py-4 text-sm text-slate-900">{article.title}</td><td className="px-6 py-4 text-sm text-slate-500">{article.date}</td><td className="px-6 py-4 flex items-center"><button onClick={() => openNewsModal(article)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDelete('news', article.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={4} className="text-center py-8 text-slate-500">No news articles found.</td></tr>)}</tbody></table></div></div> )}
                         {activeTab === 'testimonials' && ( <div><div className="flex justify-end mb-4"><button onClick={() => openTestimonialModal()} className="elegant-button">{t('addTestimonial')}</button></div><div className="overflow-x-auto"><table className="min-w-full divide-y divide-slate-200"><thead className="bg-slate-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Image</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('author')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('quote')}</th><th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">{t('actions')}</th></tr></thead><tbody className="bg-white divide-y divide-slate-200">{testimonials.length > 0 ? testimonials.map(testimonial => (<tr key={testimonial.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-4"><img src={testimonial.imageUrl} alt={testimonial.author} className="w-10 h-10 object-cover rounded-full"/></td><td className="px-6 py-4 text-sm text-slate-900">{testimonial.author}</td><td className="px-6 py-4 text-sm text-slate-500 truncate max-w-sm">{testimonial.quote}</td><td className="px-6 py-4 flex items-center"><button onClick={() => openTestimonialModal(testimonial)} className="text-[--accent] hover:text-[--accent-hover]"><EditIcon/></button><button onClick={() => handleDelete('testimonials', testimonial.id)} className="text-red-600 hover:text-red-800 ml-4"><DeleteIcon/></button></td></tr>)) : (<tr><td colSpan={4} className="text-center py-8 text-slate-500">No testimonials found.</td></tr>)}</tbody></table></div></div> )}
@@ -281,49 +274,7 @@ const AdminPage: React.FC = () => {
                                         <h3 className="text-lg font-bold text-slate-800 mb-2">Home Page Hero</h3>
                                         <div className="mb-4"><label htmlFor="heroTitle" className="block text-sm font-medium text-slate-700">{t('title')}</label><input type="text" id="heroTitle" value={heroContent.title} onChange={e => setHeroContent(p => ({...p, title: e.target.value}))} className="mt-1 block w-full elegant-input" /></div>
                                         <div className="mb-4"><label htmlFor="heroSubtitle" className="block text-sm font-medium text-slate-700">{t('subtitle')}</label><textarea id="heroSubtitle" value={heroContent.subtitle} onChange={e => setHeroContent(p => ({...p, subtitle: e.target.value}))} rows={3} className="mt-1 block w-full elegant-input"></textarea></div>
-                                        
-                                        <div className="mb-4">
-                                            <label className="block text-sm font-medium text-slate-700">{t('backgroundImage')} URL</label>
-                                            <input 
-                                                type="text" 
-                                                value={heroContent.backgroundImageUrl} 
-                                                onChange={e => setHeroContent(p => ({...p, backgroundImageUrl: e.target.value}))} 
-                                                className="mt-1 block w-full elegant-input" 
-                                                placeholder="https://example.com/background.jpg"
-                                            />
-                                            {heroContent.backgroundImageUrl && (
-                                                <div className="mt-2 relative h-32 w-full overflow-hidden rounded-md border border-slate-200">
-                                                    <img src={heroContent.backgroundImageUrl} alt="Preview" className="w-full h-full object-cover"/>
-                                                </div>
-                                            )}
-                                        </div>
                                     </div>
-                                    
-                                    <div className="border-t border-slate-200 my-6 pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div>
-                                            <h3 className="text-lg font-bold text-slate-800 mb-2">Sign In Page Image URL</h3>
-                                            <input 
-                                                type="text" 
-                                                value={heroContent.signInImageUrl || ''} 
-                                                onChange={e => setHeroContent(p => ({...p, signInImageUrl: e.target.value}))} 
-                                                className="mt-1 block w-full elegant-input" 
-                                                placeholder="https://example.com/signin.jpg"
-                                            />
-                                            {heroContent.signInImageUrl && <img src={heroContent.signInImageUrl} alt="Preview" className="mt-2 h-32 w-full object-cover rounded-md"/>}
-                                        </div>
-                                        <div>
-                                            <h3 className="text-lg font-bold text-slate-800 mb-2">Sign Up Page Image URL</h3>
-                                            <input 
-                                                type="text" 
-                                                value={heroContent.signUpImageUrl || ''} 
-                                                onChange={e => setHeroContent(p => ({...p, signUpImageUrl: e.target.value}))} 
-                                                className="mt-1 block w-full elegant-input" 
-                                                placeholder="https://example.com/signup.jpg"
-                                            />
-                                            {heroContent.signUpImageUrl && <img src={heroContent.signUpImageUrl} alt="Preview" className="mt-2 h-32 w-full object-cover rounded-md"/>}
-                                        </div>
-                                    </div>
-
                                     <div className="flex justify-end items-center mt-4"><span className="text-sm text-slate-500 mr-4">{heroSaveStatus}</span><button type="submit" className="elegant-button">{t('save')}</button></div>
                                 </form>
                             </div> 
@@ -423,11 +374,7 @@ const CourseModal: React.FC<{course: Partial<Course>, onClose: ()=>void, onSave:
     };
 
     return (<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg p-6 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800">{course.id ? t('editCourse') : t('addCourse')}</h2><form onSubmit={onSave}><div className="space-y-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('title')}</label><input name="title" value={course.title} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('description')}</label><textarea name="description" value={course.description} onChange={handleChange} className="elegant-input"/></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('category')}</label><input name="category" value={course.category} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('teacher')}</label><input name="teacher" value={course.teacher} onChange={handleChange} className="elegant-input"/></div></div><div className="grid grid-cols-3 gap-4"><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('duration')}</label><input name="duration" value={course.duration} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('rating')}</label><input name="rating" type="number" step="0.1" value={course.rating} onChange={handleChange} className="elegant-input"/></div><div><label className="block text-sm font-semibold text-slate-700 mb-1">{t('price')}</label><input name="price" type="number" value={course.price} onChange={handleChange} className="elegant-input"/></div></div>
-    <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-1">{t('imageUrl')}</label>
-        <input name="imageUrl" value={course.imageUrl} onChange={handleChange} className="elegant-input" placeholder="https://..."/>
-        {course.imageUrl && <img src={course.imageUrl} alt="Preview" className="mt-2 h-20 object-cover rounded"/>}
-    </div>
+    {/* Removed Image URL input - using generated art */}
     </div>
     
     <div className="mt-6 pt-4 border-t border-slate-200"><h3 className="text-lg font-medium text-slate-800 mb-2">{t('contentBlocks')}</h3>

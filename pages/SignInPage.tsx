@@ -4,9 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { LogoIcon, GoogleIcon } from '../components/icons';
-import { HeroContent } from '../types';
-import { db } from '../firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import TechNetworkArt from '../components/TechNetworkArt';
 
 const SignInPage: React.FC = () => {
     const [email, setEmail] = React.useState('');
@@ -17,26 +15,11 @@ const SignInPage: React.FC = () => {
     const { t } = useLanguage();
     const navigate = useNavigate();
     
-    // Dynamic Image State
-    const [signInImageUrl, setSignInImageUrl] = React.useState('https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60');
-
     React.useEffect(() => {
         if (isAuthenticated) {
             navigate(isAdmin ? '/admin' : '/dashboard');
         }
     }, [isAuthenticated, isAdmin, navigate]);
-
-    // Fetch Admin Settings for Image - Realtime
-    React.useEffect(() => {
-        const unsub = onSnapshot(doc(db, 'settings', 'hero'), (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data() as HeroContent;
-                if (data.signInImageUrl) setSignInImageUrl(data.signInImageUrl);
-            }
-        }, (err) => console.error("Failed to load page settings", err));
-        
-        return () => unsub();
-    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -63,17 +46,12 @@ const SignInPage: React.FC = () => {
 
     return (
         <div className="min-h-screen flex bg-slate-50">
-            {/* Image Section - Agenda 2063 Art Style / Dynamic */}
-            <div className="hidden lg:block relative w-0 flex-1 bg-white overflow-hidden">
-                <img
-                    className="absolute inset-0 h-full w-full object-cover pencil-art"
-                    src={signInImageUrl}
-                    alt="Sign In Background"
-                />
-                <div className="absolute inset-0 bg-indigo-900/10 mix-blend-multiply"></div>
-                <div className="absolute bottom-10 left-10 text-slate-800 bg-white/80 backdrop-blur-sm p-4 rounded-lg max-w-md shadow-lg border border-slate-200">
-                    <p className="font-bold text-lg">The Africa We Want</p>
-                    <p className="text-sm">Empowering the future through education and innovation. Agenda 2063.</p>
+            {/* Tech Line Art Side Panel (Rose Theme) */}
+            <div className="hidden lg:block relative w-0 flex-1 overflow-hidden bg-slate-900">
+                <TechNetworkArt theme="rose" className="w-full h-full" id="signin-art" />
+                <div className="absolute bottom-10 left-10 text-white z-10 p-4 max-w-md backdrop-blur-sm bg-black/20 rounded-xl border border-white/10">
+                    <p className="font-bold text-3xl mb-2 text-rose-300">The Africa We Want</p>
+                    <p className="text-rose-100/80 leading-relaxed">Empowering the future through education and innovation. Agenda 2063.</p>
                 </div>
             </div>
 
