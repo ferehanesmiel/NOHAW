@@ -140,9 +140,14 @@ const HomePage: React.FC = () => {
 
     const [news, setNews] = React.useState<NewsArticle[]>([]);
     const [testimonials, setTestimonials] = React.useState<Testimonial[]>([]);
+    
+    // Stable default text to prevent flickering
+    const defaultHeroTitle = 'Design Your Future.';
+    const defaultHeroSubtitle = 'Discover curated courses in technology and design, crafted to elevate your skills and professional life.';
+    
     const [heroContent, setHeroContent] = React.useState<HeroContent>({
-      title: 'Design Your Future.',
-      subtitle: 'Discover curated courses in technology and design, crafted to elevate your skills and professional life.',
+      title: defaultHeroTitle,
+      subtitle: defaultHeroSubtitle,
       backgroundImageUrl: '',
     });
 
@@ -154,8 +159,8 @@ const HomePage: React.FC = () => {
             if (docSnap.exists()) {
                 const data = docSnap.data() as HeroContent;
                 setHeroContent({
-                    title: data.title || 'Design Your Future.',
-                    subtitle: data.subtitle || 'Discover curated courses in technology and design.',
+                    title: data.title || defaultHeroTitle,
+                    subtitle: data.subtitle || defaultHeroSubtitle,
                     backgroundImageUrl: data.backgroundImageUrl || ''
                 });
             }
@@ -204,25 +209,27 @@ const HomePage: React.FC = () => {
             <Header />
             <main className="pt-20">
                 {/* Hero Section with Retro Neon Vibe - FORCED VISIBILITY */}
+                {/* Fixed height ensures layout stability during loading */}
                 <div className="relative overflow-hidden h-[700px] bg-slate-950 flex items-center justify-center">
                     {/* Background Art - z-0 */}
                     <div className="absolute inset-0 z-0">
+                         {/* Memoized component to prevent re-render flicker */}
                          <TechNetworkArt theme="retro-mix" className="w-full h-full opacity-60" id="hero-main" />
                     </div>
                     
-                    {/* Dark overlay for contrast */}
+                    {/* Dark overlay for contrast - z-10 */}
                     <div className="absolute inset-0 bg-gradient-to-b from-slate-900/90 via-slate-900/60 to-[var(--bg-main)] pointer-events-none z-10"></div>
 
                     {/* Content - z-20 for guaranteed visibility over art/overlay */}
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-20 text-center">
                         <div className="max-w-4xl mx-auto">
-                            <h1 className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter text-white mb-8 drop-shadow-[0_0_25px_rgba(255,255,255,0.4)]">
+                            <h1 className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter text-white mb-8 drop-shadow-[0_0_25px_rgba(255,255,255,0.4)] relative">
                                 {heroContent.title}
                             </h1>
-                            <p className="mb-10 text-xl sm:text-2xl text-cyan-100 font-light leading-relaxed drop-shadow-lg">
+                            <p className="mb-10 text-xl sm:text-2xl text-cyan-100 font-light leading-relaxed drop-shadow-lg relative">
                                 {heroContent.subtitle}
                             </p>
-                            <div className="flex flex-col sm:flex-row justify-center gap-6">
+                            <div className="flex flex-col sm:flex-row justify-center gap-6 relative">
                                 <Link to={isAuthenticated ? "/dashboard" : "/signup"} className="px-10 py-5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white rounded-full font-bold text-xl shadow-[0_0_25px_rgba(236,72,153,0.6)] transition-all transform hover:scale-105 border border-white/20">
                                     {t('getStarted')}
                                 </Link>

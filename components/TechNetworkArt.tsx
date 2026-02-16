@@ -9,7 +9,7 @@ interface TechNetworkArtProps {
   theme?: ArtTheme;
 }
 
-const TechNetworkArt: React.FC<TechNetworkArtProps> = ({ id = 'default', className = '', theme = 'retro-mix' }) => {
+const TechNetworkArt: React.FC<TechNetworkArtProps> = React.memo(({ id = 'default', className = '', theme = 'retro-mix' }) => {
   // Safeguard id to ensure it's a string before operations
   const safeId = typeof id === 'string' ? id : String(id || 'default');
   
@@ -141,6 +141,6 @@ const TechNetworkArt: React.FC<TechNetworkArtProps> = ({ id = 'default', classNa
         </svg>
     </div>
   );
-};
+});
 
 export default TechNetworkArt;
