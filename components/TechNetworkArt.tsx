@@ -44,11 +44,12 @@ const TechNetworkArt: React.FC<TechNetworkArtProps> = ({ id = 'default', classNa
 
   const colors = palettes[theme] || palettes['retro-mix'];
 
-  // Generate deterministic nodes
-  const nodes = React.useMemo(() => Array.from({ length: 25 }).map((_, i) => ({
-    x: 5 + random(i * 2) * 90, 
-    y: 5 + random(i * 2 + 1) * 90,
-    r: 1 + random(i) * 2
+  // STATIC LINE ART: Increased node count to 45 for a denser look
+  const nodeCount = 45;
+  const nodes = React.useMemo(() => Array.from({ length: nodeCount }).map((_, i) => ({
+    x: 2 + random(i * 2) * 96, // Keep within bounds (2-98%)
+    y: 2 + random(i * 2 + 1) * 96,
+    r: 0.5 + random(i) * 1.5 // Smaller nodes to accommodate density
   })), [seed]);
 
   // Generate connections
@@ -57,7 +58,8 @@ const TechNetworkArt: React.FC<TechNetworkArtProps> = ({ id = 'default', classNa
       nodes.forEach((node, i) => {
         nodes.slice(i + 1).forEach((other, j) => {
           const dist = Math.sqrt(Math.pow(node.x - other.x, 2) + Math.pow(node.y - other.y, 2));
-          if (dist < 35) { 
+          // Distance threshold adjusted for density
+          if (dist < 20) { 
             conns.push({
                 x1: node.x,
                 y1: node.y,
@@ -78,7 +80,7 @@ const TechNetworkArt: React.FC<TechNetworkArtProps> = ({ id = 'default', classNa
   const gridId = `grid-${sanitizedId}-${theme}`;
 
   return (
-    <div className={`relative overflow-hidden ${className}`}> {/* Removed default bg-slate-900 to allow transparency */}
+    <div className={`relative overflow-hidden ${className}`}>
         <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
             <defs>
                 <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -86,7 +88,7 @@ const TechNetworkArt: React.FC<TechNetworkArtProps> = ({ id = 'default', classNa
                     <stop offset="100%" stopColor={colors.stop2} stopOpacity="0.8" />
                 </linearGradient>
                 <filter id={`glow-${theme}`}>
-                    <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+                    <feGaussianBlur stdDeviation="0.5" result="coloredBlur"/>
                     <feMerge>
                         <feMergeNode in="coloredBlur"/>
                         <feMergeNode in="SourceGraphic"/>
@@ -94,13 +96,13 @@ const TechNetworkArt: React.FC<TechNetworkArtProps> = ({ id = 'default', classNa
                 </filter>
             </defs>
             
-            {/* Background Grid - Made fainter and colored */}
+            {/* Background Grid - Static */}
              <pattern id={gridId} width="10" height="10" patternUnits="userSpaceOnUse">
-                <path d="M 10 0 L 0 0 0 10" fill="none" stroke={colors.primary} strokeWidth="0.05" opacity="0.3"/>
+                <path d="M 10 0 L 0 0 0 10" fill="none" stroke={colors.primary} strokeWidth="0.05" opacity="0.2"/>
             </pattern>
             <rect width="100" height="100" fill={`url(#${gridId})`} />
 
-            {/* Connections - Brighter */}
+            {/* Connections - Static Line Art */}
             {connections.map((line, i) => (
                 <line 
                     key={`line-${line.id}`}
@@ -109,32 +111,12 @@ const TechNetworkArt: React.FC<TechNetworkArtProps> = ({ id = 'default', classNa
                     x2={line.x2} 
                     y2={line.y2} 
                     stroke={`url(#${gradientId})`} 
-                    strokeWidth={0.2} 
-                    opacity={1 - line.dist / 35}
+                    strokeWidth={0.15} 
+                    opacity={0.6 - (line.dist / 20) * 0.5} 
                 />
             ))}
 
-             {/* Moving Data Packets - High contrast */}
-             {connections.filter((_, i) => i % 2 === 0).map((line, i) => (
-                 <circle key={`packet-${i}`} r="0.8" fill={colors.particle} filter={`url(#glow-${theme})`}>
-                    <animateMotion 
-                        dur={`${3 + random(i) * 3}s`} 
-                        repeatCount="indefinite"
-                        path={`M${line.x1},${line.y1} L${line.x2},${line.y2}`}
-                        keyPoints="0;1"
-                        keyTimes="0;1"
-                        calcMode="linear"
-                    />
-                     <animate 
-                        attributeName="opacity" 
-                        values="0;1;0" 
-                        dur={`${3 + random(i) * 3}s`} 
-                        repeatCount="indefinite" 
-                    />
-                 </circle>
-             ))}
-
-            {/* Nodes - Pulsing Neon */}
+            {/* Nodes - Static */}
             {nodes.map((node, i) => (
                 <g key={`node-${i}`}>
                     <circle 
@@ -142,31 +124,18 @@ const TechNetworkArt: React.FC<TechNetworkArtProps> = ({ id = 'default', classNa
                         cy={node.y} 
                         r={node.r} 
                         fill={colors.primary} 
-                        opacity="0.9"
-                        filter={`url(#glow-${theme})`}
+                        opacity="0.8"
                     />
+                     {/* Static outer ring */}
                      <circle 
                         cx={node.x} 
                         cy={node.y} 
-                        r={node.r * 2} 
+                        r={node.r * 1.8} 
                         fill="none" 
                         stroke={colors.secondary}
-                        strokeWidth="0.15"
-                        opacity="0.6"
-                    >
-                         <animate 
-                            attributeName="r" 
-                            values={`${node.r};${node.r * 2.5}`} 
-                            dur={`${2 + random(i * 10)}s`} 
-                            repeatCount="indefinite" 
-                        />
-                         <animate 
-                            attributeName="opacity" 
-                            values="0.6;0" 
-                            dur={`${2 + random(i * 10)}s`} 
-                            repeatCount="indefinite" 
-                        />
-                    </circle>
+                        strokeWidth="0.1"
+                        opacity="0.3"
+                    />
                 </g>
             ))}
         </svg>
