@@ -11,33 +11,82 @@ import BottomNav from '../components/BottomNav';
 import { useAuth } from '../contexts/AuthContext';
 import { useCourse } from '../contexts/CourseContext';
 import { db } from '../firebase';
-import { doc, collection, onSnapshot } from 'firebase/firestore';
+import { doc, collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import TechNetworkArt from '../components/TechNetworkArt';
 
-const NewsCard: React.FC<{ article: NewsArticle }> = ({ article }) => (
-    <div className="group h-80 cursor-pointer relative">
-        <div className="absolute inset-0 bg-slate-900 rounded-2xl overflow-hidden shadow-xl border border-lime-400/30 transition-all duration-500 group-hover:scale-[1.02] group-hover:border-lime-400">
-            {/* Background Art - Replaces static image with Retro Vibe */}
-            <div className="absolute inset-0 opacity-60 group-hover:opacity-80 transition-opacity duration-500">
-                <TechNetworkArt id={article.id} theme="neon-lemon" className="w-full h-full" />
+const NewsDetailModal: React.FC<{ article: NewsArticle; onClose: () => void }> = ({ article, onClose }) => (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
+        <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative animate-scale-up border border-slate-100" onClick={e => e.stopPropagation()}>
+             {/* Header Image */}
+            <div className="h-64 relative overflow-hidden bg-slate-900">
+                {article.imageUrl && !article.imageUrl.includes('generated') ? (
+                    <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover" />
+                ) : (
+                    <TechNetworkArt id={article.id} theme="neon-lemon" className="w-full h-full" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                 <button onClick={onClose} className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 text-white rounded-full p-2 transition-colors z-10 backdrop-blur-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+                <div className="absolute bottom-6 left-6 right-6">
+                    <div className="flex items-center gap-3 mb-2">
+                        <span className="px-2 py-1 text-xs font-bold uppercase tracking-widest text-slate-900 bg-lime-400 rounded-sm">News</span>
+                        <span className="text-sm font-mono text-white/90">{new Date(article.date).toLocaleDateString()}</span>
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-white leading-tight drop-shadow-md">{article.title}</h2>
+                </div>
             </div>
             
-            {/* Dark Gradient Overlay for Text Readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent"></div>
-
-            <div className="relative z-10 h-full p-6 flex flex-col justify-end">
-                <div className="transform transition-transform duration-500 group-hover:-translate-y-2">
-                    <div className="flex items-center gap-2 mb-3">
-                         <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-900 bg-lime-400 rounded-sm">News</span>
-                         <span className="text-xs font-mono text-lime-300">{new Date(article.date).toLocaleDateString()}</span>
-                    </div>
-                    <h3 className="font-bold text-xl text-white leading-tight mb-2 drop-shadow-md group-hover:text-lime-200 transition-colors">{article.title}</h3>
-                    <p className="text-slate-300 text-sm line-clamp-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">{article.content}</p>
-                    
-                    <button className="text-xs font-bold text-lime-400 uppercase tracking-wider flex items-center gap-1 group-hover:gap-2 transition-all">
-                        Read Article <span className="text-lg">→</span>
+            <div className="p-8">
+                <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed">
+                    <p className="whitespace-pre-wrap">{article.content}</p>
+                </div>
+                
+                 <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+                    <button onClick={onClose} className="px-6 py-2 border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors font-medium">
+                        Close
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+);
+
+const NewsCard: React.FC<{ article: NewsArticle; onClick: () => void }> = ({ article, onClick }) => (
+    <div className="group flex flex-col h-full bg-white rounded-2xl overflow-hidden shadow-lg border border-slate-100 hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1" onClick={onClick}>
+        {/* Top: Image/Art Container */}
+        <div className="h-48 relative overflow-hidden bg-slate-900">
+             {/* If we have a real image, show it. If generated/placeholder, show Art */}
+             <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-105 opacity-90 group-hover:opacity-100">
+                {article.imageUrl && !article.imageUrl.includes('generated') ? (
+                    <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover" />
+                ) : (
+                    <TechNetworkArt id={article.id} theme="neon-orange" className="w-full h-full" />
+                )}
+             </div>
+             
+             {/* Gradient overlay for depth */}
+             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+             
+             {/* Date Badge - Now properly formatted and visible */}
+             <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-md text-xs font-bold text-slate-800 shadow-sm border border-white/50">
+                {new Date(article.date).toLocaleDateString()}
+             </div>
+        </div>
+        
+        {/* Bottom: Content (White Background) */}
+        <div className="p-6 flex flex-col flex-grow">
+            <h3 className="font-bold text-xl text-slate-900 mb-3 line-clamp-2 leading-tight group-hover:text-indigo-600 transition-colors">
+                {article.title}
+            </h3>
+            <p className="text-slate-600 text-sm line-clamp-3 mb-4 flex-grow font-medium">
+                {article.content}
+            </p>
+            
+            <div className="mt-auto flex items-center text-indigo-600 font-bold text-xs uppercase tracking-wider group-hover:gap-2 transition-all gap-1">
+                Read Article <span className="text-lg leading-none">→</span>
             </div>
         </div>
     </div>
@@ -97,11 +146,13 @@ const HomePage: React.FC = () => {
       backgroundImageUrl: '',
     });
 
+    // New state for viewing news article
+    const [viewingNews, setViewingNews] = React.useState<NewsArticle | null>(null);
+
     React.useEffect(() => {
         const unsubHero = onSnapshot(doc(db, 'settings', 'hero'), (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data() as HeroContent;
-                // Ensure strings are not empty to prevent layout collapse
                 setHeroContent({
                     title: data.title || 'Design Your Future.',
                     subtitle: data.subtitle || 'Discover curated courses in technology and design.',
@@ -110,7 +161,9 @@ const HomePage: React.FC = () => {
             }
         }, (error) => console.error("Error fetching hero data:", error));
 
-        const unsubNews = onSnapshot(collection(db, 'news'), (snapshot) => {
+        // Using Query to order by date descending so the newest news appears first
+        const newsQuery = query(collection(db, 'news'), orderBy('date', 'desc'), limit(4));
+        const unsubNews = onSnapshot(newsQuery, (snapshot) => {
             setNews(snapshot.docs.map(d => ({id:d.id, ...d.data()} as NewsArticle)));
         }, (error) => console.error("Error fetching news:", error));
 
@@ -210,21 +263,27 @@ const HomePage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* News Section - Neon Retro Style */}
-                <div className="py-24 bg-slate-950 relative overflow-hidden">
-                     {/* Background Tech Art for Section */}
-                     <div className="absolute inset-0 opacity-20 pointer-events-none">
-                         <TechNetworkArt id="news-section-bg" theme="neon-lemon" className="w-full h-full" />
+                {/* News Section - Clean Light Style */}
+                <div className="py-24 bg-slate-50 relative overflow-hidden">
+                     {/* Background Tech Art for Section - Subtle on Light BG */}
+                     <div className="absolute inset-0 opacity-10 pointer-events-none">
+                         <TechNetworkArt id="news-section-bg" theme="indigo" className="w-full h-full" />
                      </div>
 
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                         <div className="text-center mb-16">
-                            <h2 className="text-4xl font-bold text-white tracking-tight mb-4 drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">{t('latestNews')}</h2>
-                             <div className="w-24 h-1.5 bg-lime-400 mx-auto rounded-full shadow-[0_0_15px_#a3e635]"></div>
+                            <h2 className="text-4xl font-bold text-slate-900 tracking-tight mb-4">{t('latestNews')}</h2>
+                             <div className="w-24 h-1.5 bg-indigo-500 mx-auto rounded-full"></div>
                         </div>
                         <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-2 max-w-5xl mx-auto">
                             {news.length > 0 ? (
-                                news.slice(0,2).map((article) => (<NewsCard key={article.id} article={article} />))
+                                news.slice(0,2).map((article) => (
+                                    <NewsCard 
+                                        key={article.id} 
+                                        article={article} 
+                                        onClick={() => setViewingNews(article)} 
+                                    />
+                                ))
                             ) : (
                                 <div className="col-span-2 text-center text-slate-500">No news available.</div>
                             )}
@@ -241,6 +300,9 @@ const HomePage: React.FC = () => {
                     onClose={() => setPaymentModalOpen(false)}
                     onPaymentSuccess={handlePaymentSuccess}
                 />
+            )}
+            {viewingNews && (
+                <NewsDetailModal article={viewingNews} onClose={() => setViewingNews(null)} />
             )}
         </div>
     );
